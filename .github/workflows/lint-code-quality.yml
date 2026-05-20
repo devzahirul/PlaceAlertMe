@@ -1,0 +1,156 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Kotlin Linting
+  kotlin-lint:
+    name: Kotlin Lint (ktlint)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Download Gradle wrapper jar
+        run: |
+          mkdir -p android/gradle/wrapper
+          curl -fsSL -o android/gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
+          chmod +x android/gradlew
+
+      - name: Run Kotlin lint
+        working-directory: ./android
+        run: ./gradlew ktlint || true
+
+      - name: Upload lint results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotlin-lint-results
+          path: android/geo-engine/build/reports/
+
+  # Swift Linting
+  swift-lint:
+    name: Swift Lint (SwiftLint)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SwiftLint
+        run: brew install swiftlint
+
+      - name: Run SwiftLint
+        working-directory: ./ios
+        run: swiftlint || true
+
+  # C++ Static Analysis
+  cpp-analysis:
+    name: C++ Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install analysis tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck clang-tools cmake
+
+      - name: Run cppcheck
+        run: cppcheck --enable=all --suppress=missingIncludeSystem cpp/ || true
+
+      - name: Build for clang-tidy
+        run: |
+          cmake -S cpp/geo_engine -B cpp/geo_engine/build \
+            -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=OFF \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake --build cpp/geo_engine/build
+
+      - name: Run clang-tidy
+        run: run-clang-tidy -p cpp/geo_engine/build || true
+
+      - name: Upload analysis results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-analysis-results
+          path: cpp/geo_engine/build/
+
+  # Security scanning — SARIF upload only runs on push (not PRs)
+  # GitHub restricts security-events write access on PR workflows
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: github.event_name == 'push'
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Upload Trivy SARIF as artifact (PRs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sarif
+          path: trivy-results.sarif
+
+  # CodeQL Analysis — only on push to avoid PR permission errors
+  codeql-analysis:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'cpp', 'java' ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
