@@ -11,6 +11,10 @@ jobs:
   cpp-tests:
     name: C++ Tests (Google Test)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -37,6 +41,7 @@ jobs:
 
       - name: Publish C++ test results
         if: always()
+        continue-on-error: true
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: cpp/geo_engine/build/test-results.xml
@@ -47,6 +52,10 @@ jobs:
   android-unit-tests:
     name: Android Unit Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -81,6 +90,7 @@ jobs:
 
       - name: Publish Android unit test results
         if: always()
+        continue-on-error: true
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: android/geo-engine/build/test-results/testDebugUnitTest/**/*.xml
