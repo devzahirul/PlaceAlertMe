@@ -5,6 +5,7 @@ plugins {
 }
 
 android {
+    namespace 'com.placealertme.geofence'
     compileSdk 34
     ndkVersion "25.1.8937393"
 
