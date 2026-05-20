@@ -2,7 +2,7 @@ import Foundation
 import CoreLocation
 import CoreMotion
 
-class TrackingCoordinator: NSObject {
+internal class TrackingCoordinator: NSObject {
     static let shared = TrackingCoordinator()
 
     private let locationManager: LocationManager

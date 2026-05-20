@@ -1,11 +1,11 @@
 import Foundation
 import CoreMotion
 
-protocol ActivityRecognitionDelegate: AnyObject {
+internal protocol ActivityRecognitionDelegate: AnyObject {
     func activityRecognitionManager(_ manager: ActivityRecognitionManager, didDetectActivity activity: CMMotionActivity)
 }
 
-class ActivityRecognitionManager {
+internal class ActivityRecognitionManager {
     weak var delegate: ActivityRecognitionDelegate?
 
     private let motionActivityManager = CMMotionActivityManager()

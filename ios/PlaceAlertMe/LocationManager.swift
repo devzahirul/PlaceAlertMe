@@ -1,12 +1,12 @@
 import Foundation
 import CoreLocation
 
-protocol LocationManagerDelegate: AnyObject {
+internal protocol LocationManagerDelegate: AnyObject {
     func locationManager(_ manager: LocationManager, didUpdate location: CLLocation, response: GeoEngineResponse)
     func locationManager(_ manager: LocationManager, didChangeZoneStatus isInside: Bool)
 }
 
-class LocationManager: NSObject, CLLocationManagerDelegate {
+internal class LocationManager: NSObject, CLLocationManagerDelegate {
     weak var delegate: LocationManagerDelegate?
 
     private let locationManager = CLLocationManager()

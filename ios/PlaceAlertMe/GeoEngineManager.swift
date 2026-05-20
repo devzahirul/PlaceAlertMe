@@ -1,7 +1,7 @@
 import Foundation
 import CoreLocation
 
-class GeoEngineManager {
+internal class GeoEngineManager {
     static let shared = GeoEngineManager()
 
     private init() {
