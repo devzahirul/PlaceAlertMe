@@ -2,7 +2,7 @@
 #define GEO_ENGINE_WRAPPER_H
 
 #ifdef __cplusplus
-extern \"C\" {
+extern "C" {
 #endif
 
 /**
