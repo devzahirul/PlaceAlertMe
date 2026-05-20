@@ -25,8 +25,6 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // Sign with debug key so artifact APK is installable for testing
-            // (replace with a real upload-key signing config before publishing)
             signingConfig signingConfigs.debug
         }
     }
