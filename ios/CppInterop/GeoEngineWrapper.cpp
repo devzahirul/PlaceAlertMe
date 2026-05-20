@@ -8,7 +8,7 @@ using namespace geo_engine;
 static std::unique_ptr<GeoEngine> g_ios_engine = nullptr;
 
 // Swift-callable C interface
-extern \"C\" {
+extern "C" {
 
 /**
  * Initialize the geofencing engine (C interface for Swift)
