@@ -90,7 +90,8 @@ jobs:
           name: cpp-analysis-results
           path: cpp/geo_engine/build/
 
-  # Security scanning
+  # Security scanning — SARIF upload only runs on push (not PRs)
+  # GitHub restricts security-events write access on PR workflows
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
@@ -111,23 +112,24 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
 
-      - name: Upload Trivy results
+      - name: Upload Trivy SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: github.event_name == 'push'
         with:
           sarif_file: 'trivy-results.sarif'
 
-      - name: Upload dependency check results
+      - name: Upload Trivy SARIF as artifact (PRs)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: trivy-sarif
           path: trivy-results.sarif
 
-  # CodeQL Analysis
+  # CodeQL Analysis — only on push to avoid PR permission errors
   codeql-analysis:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     permissions:
       security-events: write
       actions: read
