@@ -18,6 +18,9 @@ let package = Package(
             name: "PlaceAlertMe",
             dependencies: ["GeoEngineCore"],
             path: "ios/PlaceAlertMe",
+            exclude: [
+                "SampleViewController.swift"  // UIKit demo, not part of library
+            ],
             publicHeadersPath: "."
         ),
         .target(

@@ -11,6 +11,10 @@ jobs:
   cpp-tests:
     name: C++ Tests (Google Test)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -37,9 +41,10 @@ jobs:
 
       - name: Publish C++ test results
         if: always()
+        continue-on-error: true
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          files: cpp/geo_engine/tests/build/test-results.xml
+          files: cpp/geo_engine/build/test-results.xml
           check_name: C++ Test Results
           comment_title: C++ Tests
 
@@ -47,6 +52,10 @@ jobs:
   android-unit-tests:
     name: Android Unit Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -55,7 +64,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Setup Android SDK
@@ -81,6 +90,7 @@ jobs:
 
       - name: Publish Android unit test results
         if: always()
+        continue-on-error: true
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: android/geo-engine/build/test-results/testDebugUnitTest/**/*.xml
@@ -99,7 +109,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Setup Android SDK
@@ -149,11 +159,10 @@ jobs:
           xcode-version: latest
 
       - name: Run iOS tests
-        working-directory: ./ios
         run: |
           xcodebuild test \
             -scheme PlaceAlertMe \
-            -destination 'platform=iOS Simulator,name=iPhone 14' \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
             -enableCodeCoverage YES \
             -resultBundlePath test-results.xcresult \
             -derivedDataPath DerivedData
@@ -161,8 +170,7 @@ jobs:
       - name: Generate iOS test report
         if: always()
         run: |
-          cd ios
-          xcrun xctest-results-bundle test-results.xcresult --json > test-results.json || true
+          xcrun xcresulttool get --path test-results.xcresult --format json > test-results.json 2>/dev/null || true
 
       - name: Upload iOS test results
         if: always()
@@ -170,8 +178,8 @@ jobs:
         with:
           name: ios-test-results
           path: |
-            ios/test-results.xcresult/
-            ios/test-results.json
+            test-results.xcresult/
+            test-results.json
 
   # Code Coverage
   code-coverage:
@@ -233,47 +241,22 @@ jobs:
 
       - name: Generate summary report
         run: |
-          echo "# Test Execution Summary" > test-summary.md
-          echo "" >> test-summary.md
-          echo "## Build Information" >> test-summary.md
-          echo "- **Commit:** ${{ github.sha }}" >> test-summary.md
-          echo "- **Branch:** ${{ github.ref }}" >> test-summary.md
-          echo "- **Run:** ${{ github.run_id }}" >> test-summary.md
-          echo "" >> test-summary.md
-          echo "## Test Results" >> test-summary.md
-          echo "- **C++ Core Engine:** ✅ Pass" >> test-summary.md
-          echo "- **Android Unit Tests:** ✅ Pass" >> test-summary.md
-          echo "- **Android Instrumented Tests:** ✅ Pass" >> test-summary.md
-          echo "- **iOS Tests:** ✅ Pass" >> test-summary.md
-          echo "" >> test-summary.md
-          echo "## Code Coverage" >> test-summary.md
-          echo "| Component | Coverage |" >> test-summary.md
-          echo "|-----------|----------|" >> test-summary.md
-          echo "| C++ Core | 95%+ |" >> test-summary.md
-          echo "| Android | 85%+ |" >> test-summary.md
-          echo "| iOS | 90%+ |" >> test-summary.md
+          {
+            echo "# Test Execution Summary"
+            echo ""
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo "**Branch:** \`${{ github.ref }}\`"
+            echo "**Run ID:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo ""
+            echo "## Job Status"
+            echo "- **C++ Tests:** ${{ needs.cpp-tests.result }}"
+            echo "- **Android Unit Tests:** ${{ needs.android-unit-tests.result }}"
+            echo "- **Android Instrumented Tests:** ${{ needs.android-instrumented-tests.result }}"
+            echo "- **iOS Tests:** ${{ needs.ios-tests.result }}"
+          } > test-summary.md
 
       - name: Upload summary report
         uses: actions/upload-artifact@v4
         with:
           name: test-summary
           path: test-summary.md
-
-      - name: Comment on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const summary = fs.readFileSync('test-summary.md', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: summary
-            });
-
-      - name: Set status check
-        if: always()
-        run: |
-          echo "✅ All tests completed!"
