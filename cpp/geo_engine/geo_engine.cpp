@@ -87,12 +87,12 @@ int64_t GeoEngine::calculateAdaptiveInterval(double speedMps, double distanceToN
     if (distanceToNearestZone > radiusOfNearestZone * 2.0) {
         baseInterval *= 2;  // Double interval when far from zone
     } else if (distanceToNearestZone < radiusOfNearestZone * 0.5) {
-        baseInterval = std::min(baseInterval, 5000LL);  // Increase frequency near zone
+        baseInterval = std::min(baseInterval, static_cast<int64_t>(5000));
     }
 
     // Clamp to min/max bounds
-    baseInterval = std::max(1000LL, baseInterval);      // Min 1 second
-    baseInterval = std::min(120000LL, baseInterval);    // Max 2 minutes
+    baseInterval = std::max(static_cast<int64_t>(1000),   baseInterval);
+    baseInterval = std::min(static_cast<int64_t>(120000), baseInterval);
 
     return baseInterval;
 }
