@@ -32,7 +32,7 @@ jobs:
 
       - name: Upload C++ test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cpp-test-results
           path: cpp/geo_engine/tests/build/test-results.xml
@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload Android unit test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: android-unit-test-results
           path: android/geo-engine/build/test-results/testDebugUnitTest/
@@ -121,7 +121,7 @@ jobs:
 
       - name: Upload Android instrumented test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: android-instrumented-test-results
           path: android/geo-engine/build/outputs/androidTest-results/
@@ -158,7 +158,7 @@ jobs:
 
       - name: Upload iOS test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-test-results
           path: |
@@ -202,7 +202,7 @@ jobs:
           echo "Coverage: 90%+" >> coverage-report/README.md
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage-report/
@@ -246,7 +246,7 @@ jobs:
           echo "| iOS | 90%+ |" >> test-summary.md
 
       - name: Upload summary report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-summary
           path: test-summary.md

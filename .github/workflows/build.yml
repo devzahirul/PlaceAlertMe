@@ -30,7 +30,7 @@ jobs:
           make
 
       - name: Upload C++ artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cpp-build
           path: cpp/geo_engine/build/
@@ -70,13 +70,13 @@ jobs:
           ./gradlew :example-app:assembleRelease --no-daemon
 
       - name: Upload Android Library artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: android-library
           path: android/geo-engine/build/outputs/aar/
 
       - name: Upload Example App APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: example-app-release-apk
           path: android/example-app/build/outputs/apk/release/
@@ -127,7 +127,7 @@ jobs:
           swift build -c release
 
       - name: Upload iOS artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-build
           path: |
@@ -212,7 +212,7 @@ jobs:
           cmake --build . --config Release
 
       - name: Upload matrix build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: matrix-build-${{ matrix.target }}
           path: cpp/geo_engine/build/

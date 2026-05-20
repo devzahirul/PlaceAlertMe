@@ -30,7 +30,7 @@ jobs:
 
       - name: Upload lint results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: kotlin-lint-results
           path: android/geo-engine/build/reports/
@@ -81,7 +81,7 @@ jobs:
 
       - name: Upload analysis results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cpp-analysis-results
           path: cpp/geo_engine/build/
@@ -117,7 +117,7 @@ jobs:
 
       - name: Upload dependency check results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dependency-check-results
           path: dependency-check-results.json
