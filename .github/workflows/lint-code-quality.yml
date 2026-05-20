@@ -125,20 +125,16 @@ jobs:
           name: trivy-sarif
           path: trivy-results.sarif
 
-  # CodeQL Analysis — only on push to avoid PR permission errors
+  # CodeQL Analysis — C++ only (Android/Java requires full SDK build env)
+  # Only runs on push to avoid PR permission errors
   codeql-analysis:
-    name: CodeQL Analysis
+    name: CodeQL Analysis (C++)
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     permissions:
       security-events: write
       actions: read
       contents: read
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'cpp', 'java' ]
 
     steps:
       - name: Checkout code
@@ -147,10 +143,13 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: ${{ matrix.language }}
+          languages: cpp
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+      - name: Build C++ for CodeQL
+        run: |
+          cmake -S cpp/geo_engine -B cpp/geo_engine/build \
+            -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=OFF
+          cmake --build cpp/geo_engine/build
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
