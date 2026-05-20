@@ -50,13 +50,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup SwiftLint
-        run: |
-          brew install swiftlint
+        run: brew install swiftlint
 
       - name: Run SwiftLint
         working-directory: ./ios
-        run: |
-          swiftlint || true
+        run: swiftlint || true
 
   # C++ Static Analysis
   cpp-analysis:
@@ -73,16 +71,17 @@ jobs:
           sudo apt-get install -y cppcheck clang-tools cmake
 
       - name: Run cppcheck
+        run: cppcheck --enable=all --suppress=missingIncludeSystem cpp/ || true
+
+      - name: Build for clang-tidy
         run: |
-          cppcheck --enable=all --suppress=missingIncludeSystem cpp/ || true
+          cmake -S cpp/geo_engine -B cpp/geo_engine/build \
+            -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=OFF \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake --build cpp/geo_engine/build
 
       - name: Run clang-tidy
-        working-directory: ./cpp/geo_engine
-        run: |
-          mkdir -p build
-          cd build
-          cmake ..
-          run-clang-tidy || true
+        run: run-clang-tidy -p cpp/geo_engine/build || true
 
       - name: Upload analysis results
         if: always()
@@ -95,6 +94,10 @@ jobs:
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
 
     steps:
       - name: Checkout code
@@ -109,28 +112,26 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
-
-      - name: Run OWASP dependency check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          path: '.'
-          format: 'JSON'
 
       - name: Upload dependency check results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dependency-check-results
-          path: dependency-check-results.json
+          name: trivy-sarif
+          path: trivy-results.sarif
 
-  # Code review with CodeQL
+  # CodeQL Analysis
   codeql-analysis:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
 
     strategy:
       fail-fast: false
@@ -142,12 +143,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
