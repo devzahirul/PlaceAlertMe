@@ -111,7 +111,7 @@ jobs:
           xcode-version: latest
 
       - name: Build Swift Package (root)
-        run: swift build -c release
+        run: swift build -c release --triple arm64-apple-ios13.0
 
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4
