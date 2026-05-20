@@ -37,7 +37,7 @@ jobs:
 
   # Android Library Build
   android-build:
-    name: Build Android Library (AAR)
+    name: Build Android Library (AAR) & Example App
     runs-on: ubuntu-latest
 
     steps:
@@ -59,18 +59,27 @@ jobs:
           chmod +x gradlew
           ./gradlew build --no-daemon
 
-      - name: Generate release APK
+      - name: Generate library release AAR
         working-directory: ./android
         run: |
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew :geo-engine:assembleRelease --no-daemon
 
-      - name: Upload Android artifacts
+      - name: Generate example app release APK
+        working-directory: ./android
+        run: |
+          ./gradlew :example-app:assembleRelease --no-daemon
+
+      - name: Upload Android Library artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: android-build
-          path: |
-            android/geo-engine/build/outputs/aar/
-            android/geo-engine/build/outputs/apk/
+          name: android-library
+          path: android/geo-engine/build/outputs/aar/
+
+      - name: Upload Example App APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: example-app-release-apk
+          path: android/example-app/build/outputs/apk/release/
 
       - name: Create release
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -81,8 +90,10 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body: |
-            Android Library Release
-            - AAR: android/geo-engine/build/outputs/aar/
+            PlaceAlertMe Release
+            - Android Library (AAR): `android/geo-engine/build/outputs/aar/`
+            - Example App (APK): `android/example-app/build/outputs/apk/release/example-app-release.apk`
+            - Features: Jetpack Compose UI, OpenStreetMap integration, geofence zone management
           draft: false
           prerelease: false
 
