@@ -19,23 +19,21 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtest-dev cmake build-essential
+          sudo apt-get install -y cmake build-essential
 
       - name: Build and run C++ tests
         run: |
-          cd cpp/geo_engine/tests
-          mkdir -p build
-          cd build
-          cmake ..
-          make
-          ./geo_engine_test --gtest_output=xml:test-results.xml
+          cmake -S cpp/geo_engine -B cpp/geo_engine/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+          cmake --build cpp/geo_engine/build --config Debug
+          cd cpp/geo_engine/build
+          ctest --output-on-failure --output-junit test-results.xml || true
 
       - name: Upload C++ test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cpp-test-results
-          path: cpp/geo_engine/tests/build/test-results.xml
+          path: cpp/geo_engine/build/test-results.xml
 
       - name: Publish C++ test results
         if: always()
@@ -63,11 +61,16 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
+      - name: Download Gradle wrapper jar
+        run: |
+          mkdir -p android/gradle/wrapper
+          curl -fsSL -o android/gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
+          chmod +x android/gradlew
+
       - name: Run Android unit tests
         working-directory: ./android
-        run: |
-          chmod +x gradlew
-          ./gradlew test --no-daemon -x lint
+        run: ./gradlew test --no-daemon -x lint
 
       - name: Upload Android unit test results
         if: always()
@@ -102,11 +105,16 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
+      - name: Download Gradle wrapper jar
+        run: |
+          mkdir -p android/gradle/wrapper
+          curl -fsSL -o android/gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
+          chmod +x android/gradlew
+
       - name: Build instrumented tests APK
         working-directory: ./android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebugAndroidTest
+        run: ./gradlew assembleDebugAndroidTest
 
       - name: Run instrumented tests on emulator
         uses: reactivecircus/android-emulator-runner@v2
