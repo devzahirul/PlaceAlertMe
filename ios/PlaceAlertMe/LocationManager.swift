@@ -23,7 +23,6 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
     private func setupLocationManager() {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        locationManager.allowsBackgroundLocationUpdates = true
         locationManager.pausesLocationUpdatesAutomatically = false
         locationManager.distanceFilter = 5
     }
@@ -41,6 +40,7 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
 
     func startTracking() {
         requestLocationPermission()
+        locationManager.allowsBackgroundLocationUpdates = true
         locationManager.startUpdatingLocation()
     }
 

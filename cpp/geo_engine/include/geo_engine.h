@@ -113,8 +113,8 @@ private:
      * @param radiusOfNearestZone Radius of nearest zone
      * @return Recommended next interval in milliseconds
      */
-    int64_t calculateAdaptiveInterval(double speedMps, double distanceToNearestZone, 
-                                      double radiusOfNearestZone) const;
+    int64_t calculateAdaptiveInterval(double speedMps, double distanceToNearestZone,
+                                      double radiusOfNearestZone, bool isInsideZone) const;
     
     /**
      * Check if location is inside any geofence zone

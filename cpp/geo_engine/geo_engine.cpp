@@ -74,7 +74,7 @@ std::pair<bool, double> GeoEngine::checkZoneContainment(const UserLocation& loca
 }
 
 int64_t GeoEngine::calculateAdaptiveInterval(double speedMps, double distanceToNearestZone,
-                                            double radiusOfNearestZone) const {
+                                            double radiusOfNearestZone, bool isInsideZone) const {
     int64_t baseInterval = 60000;  // 60 seconds default
 
     // Adjust based on speed
@@ -88,11 +88,14 @@ int64_t GeoEngine::calculateAdaptiveInterval(double speedMps, double distanceToN
         baseInterval = 2000;   // 2 seconds when moving fast
     }
 
-    // Adjust based on distance to zone
-    if (distanceToNearestZone > radiusOfNearestZone * 2.0) {
-        baseInterval *= 2;  // Double interval when far from zone
-    } else if (distanceToNearestZone < radiusOfNearestZone * 0.5) {
-        baseInterval = std::min(baseInterval, static_cast<int64_t>(5000));
+    // Proximity adjustments only apply when approaching from outside;
+    // inside the zone, speed alone governs the interval.
+    if (!isInsideZone) {
+        if (distanceToNearestZone > radiusOfNearestZone * 2.0) {
+            baseInterval *= 2;  // Double interval when far from zone
+        } else if (distanceToNearestZone < radiusOfNearestZone * 0.5) {
+            baseInterval = std::min(baseInterval, static_cast<int64_t>(5000));
+        }
     }
 
     // Clamp to min/max bounds
@@ -127,7 +130,7 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
     }
 
     // Calculate adaptive interval
-    int64_t nextInterval = calculateAdaptiveInterval(location.speedMps, distanceToNearest, nearestZoneRadius);
+    int64_t nextInterval = calculateAdaptiveInterval(location.speedMps, distanceToNearest, nearestZoneRadius, isInside);
 
     response.isInsideZone = isInside;
     response.nextIntervalMs = nextInterval;
