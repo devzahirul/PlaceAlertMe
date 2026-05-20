@@ -81,25 +81,24 @@ jobs:
           name: example-app-release-apk
           path: android/example-app/build/outputs/apk/release/
 
-      - name: Create release
+      - name: Create release with APK + AAR
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          files: |
+            android/example-app/build/outputs/apk/release/*.apk
+            android/geo-engine/build/outputs/aar/*.aar
           body: |
-            PlaceAlertMe Release
-            - Android Library (AAR): `android/geo-engine/build/outputs/aar/`
-            - Example App (APK): `android/example-app/build/outputs/apk/release/example-app-release.apk`
-            - Features: Jetpack Compose UI, OpenStreetMap integration, geofence zone management
-          draft: false
-          prerelease: false
+            ## PlaceAlertMe Release
 
-  # iOS Framework Build
+            **Android Library (AAR)** — drop-in geofencing library with C++ core via JNI
+            **Example App (APK)** — Jetpack Compose + OpenStreetMap demo, ready to install
+
+            Install the APK: `adb install example-app-release-unsigned.apk`
+
+  # iOS Swift Package Build
   ios-build:
-    name: Build iOS Framework
+    name: Build iOS Swift Package
     runs-on: macos-latest
 
     steps:
@@ -111,43 +110,14 @@ jobs:
         with:
           xcode-version: latest
 
-      - name: Build iOS framework
-        working-directory: ./ios
-        run: |
-          mkdir -p build
-          cd build
-          cmake -GXcode \
-            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-            -DCMAKE_BUILD_TYPE=Release ..
-          cmake --build . --config Release
-
-      - name: Build Swift Package
-        working-directory: ./ios
-        run: |
-          swift build -c release
+      - name: Build Swift Package (root)
+        run: swift build -c release
 
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ios-build
-          path: |
-            ios/build/
-            ios/.build/
-
-      - name: Create release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            iOS Framework Release
-            - Swift Package: Available via SPM
-            - Framework: ios/build/Release-iphoneos/
-          draft: false
-          prerelease: false
+          path: .build/release/
 
   # Build matrix for multiple platforms
   matrix-build:

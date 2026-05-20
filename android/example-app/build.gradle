@@ -1,9 +1,11 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id 'kotlin-kapt'
 }
 
 android {
+    namespace 'com.placealertme.example'
     compileSdk 34
     ndkVersion "25.1.8937393"
 
@@ -23,6 +25,9 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Sign with debug key so artifact APK is installable for testing
+            // (replace with a real upload-key signing config before publishing)
+            signingConfig signingConfigs.debug
         }
     }
 
