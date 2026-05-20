@@ -22,11 +22,16 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
 
+      - name: Download Gradle wrapper jar
+        run: |
+          mkdir -p android/gradle/wrapper
+          curl -fsSL -o android/gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
+          chmod +x android/gradlew
+
       - name: Run Kotlin lint
         working-directory: ./android
-        run: |
-          chmod +x gradlew
-          ./gradlew ktlint || true
+        run: ./gradlew ktlint || true
 
       - name: Upload lint results
         if: always()
