@@ -1,10 +1,11 @@
-#include <SwiftCInterop.h>
-#include \"../../../cpp/geo_engine/include/geo_engine.h\"
+#include "geo_engine.h"
 #include <memory>
 #include <vector>
 
+using namespace geo_engine;
+
 // Global reference to GeoEngine instance
-static std::unique_ptr<geo_engine::GeoEngine> g_ios_engine = nullptr;
+static std::unique_ptr<GeoEngine> g_ios_engine = nullptr;
 
 // Swift-callable C interface
 extern \"C\" {
@@ -14,7 +15,7 @@ extern \"C\" {
  */
 void ios_geo_engine_initialize() {
     if (!g_ios_engine) {
-        g_ios_engine = std::make_unique<geo_engine::GeoEngine>();
+        g_ios_engine = std::make_unique<GeoEngine>();
     }
 }
 
@@ -23,7 +24,7 @@ void ios_geo_engine_initialize() {
  */
 void ios_geo_engine_add_zone(double latitude, double longitude, double radiusMeters) {
     if (g_ios_engine) {
-        geo_engine::GeofenceZone zone(latitude, longitude, radiusMeters);
+        GeofenceZone zone(latitude, longitude, radiusMeters);
         g_ios_engine->addZone(zone);
     }
 }
@@ -40,16 +41,16 @@ struct GeoEngineResult {
 
 GeoEngineResult ios_geo_engine_process_location(double latitude, double longitude, double speedMps) {
     GeoEngineResult result = {false, 60000, 0.0};
-    
+
     if (g_ios_engine) {
-        geo_engine::UserLocation location(latitude, longitude, speedMps);
-        geo_engine::EngineResponse response = g_ios_engine->processLocation(location);
-        
+        UserLocation location(latitude, longitude, speedMps);
+        EngineResponse response = g_ios_engine->processLocation(location);
+
         result.isInsideZone = response.isInsideZone;
         result.nextIntervalMs = response.nextIntervalMs;
         result.distanceMeters = response.distanceMeters;
     }
-    
+
     return result;
 }
 
