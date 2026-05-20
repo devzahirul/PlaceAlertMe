@@ -1,0 +1,30 @@
+# CMake build directories
+build/
+**/build/
+cmake-build-*/
+
+# Android Gradle
+android/.gradle/
+android/build/
+*.iml
+.idea/
+local.properties
+captures/
+
+# iOS / Xcode
+*.xcworkspace
+xcuserdata/
+DerivedData/
+.build/
+.swiftpm/
+
+# C++ tooling
+*.o
+*.a
+*.so
+*.dylib
+compile_commands.json
+
+# OS
+.DS_Store
+Thumbs.db

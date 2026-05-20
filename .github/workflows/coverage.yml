@@ -25,11 +25,16 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
+      - name: Download Gradle wrapper jar
+        run: |
+          mkdir -p android/gradle/wrapper
+          curl -fsSL -o android/gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
+          chmod +x android/gradlew
+
       - name: Run tests with coverage
         working-directory: ./android
-        run: |
-          chmod +x gradlew
-          ./gradlew testDebugUnitTest jacocoTestReport --no-daemon
+        run: ./gradlew testDebugUnitTest jacocoTestReport --no-daemon
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

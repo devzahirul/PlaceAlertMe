@@ -23,11 +23,8 @@ jobs:
 
       - name: Build C++ library
         run: |
-          cd cpp/geo_engine
-          mkdir -p build
-          cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
-          make
+          cmake -S cpp/geo_engine -B cpp/geo_engine/build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
+          cmake --build cpp/geo_engine/build --config Release
 
       - name: Upload C++ artifacts
         uses: actions/upload-artifact@v4
@@ -53,21 +50,24 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
+      - name: Download Gradle wrapper jar
+        run: |
+          mkdir -p android/gradle/wrapper
+          curl -fsSL -o android/gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
+          chmod +x android/gradlew
+
       - name: Build Android library
         working-directory: ./android
-        run: |
-          chmod +x gradlew
-          ./gradlew build --no-daemon
+        run: ./gradlew build --no-daemon
 
       - name: Generate library release AAR
         working-directory: ./android
-        run: |
-          ./gradlew :geo-engine:assembleRelease --no-daemon
+        run: ./gradlew :geo-engine:assembleRelease --no-daemon
 
       - name: Generate example app release APK
         working-directory: ./android
-        run: |
-          ./gradlew :example-app:assembleRelease --no-daemon
+        run: ./gradlew :example-app:assembleRelease --no-daemon
 
       - name: Upload Android Library artifacts
         uses: actions/upload-artifact@v4
@@ -184,32 +184,17 @@ jobs:
         run: |
           choco install cmake --no-progress
 
-      - name: Build C++ (Ubuntu)
-        if: runner.os == 'Linux'
+      - name: Build C++ (Ubuntu/macOS)
+        if: runner.os != 'Windows'
         run: |
-          cd cpp/geo_engine
-          mkdir -p build
-          cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
-          make
-
-      - name: Build C++ (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cd cpp/geo_engine
-          mkdir -p build
-          cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
-          make
+          cmake -S cpp/geo_engine -B cpp/geo_engine/build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
+          cmake --build cpp/geo_engine/build --config Release
 
       - name: Build C++ (Windows)
         if: runner.os == 'Windows'
         run: |
-          cd cpp/geo_engine
-          mkdir -p build
-          cd build
-          cmake -G "Visual Studio 17 2022" ..
-          cmake --build . --config Release
+          cmake -S cpp/geo_engine -B cpp/geo_engine/build -G "Visual Studio 17 2022" -DBUILD_TESTS=OFF
+          cmake --build cpp/geo_engine/build --config Release
 
       - name: Upload matrix build artifacts
         uses: actions/upload-artifact@v4
