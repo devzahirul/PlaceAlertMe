@@ -1,0 +1,23 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+
+rootProject.name = "PlaceAlertMe"
+
+include ':geo-engine'
+project(':geo-engine').projectDir = new File(rootDir, 'geo-engine')
+
+include ':example-app'
+project(':example-app').projectDir = new File(rootDir, 'example-app')
