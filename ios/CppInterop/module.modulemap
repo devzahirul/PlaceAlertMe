@@ -1,0 +1,5 @@
+module GeoEngineWrapper {
+    header "GeoEngineWrapper.h"
+    link "c++"
+    export *
+}

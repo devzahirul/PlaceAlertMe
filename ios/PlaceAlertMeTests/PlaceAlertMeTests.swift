@@ -1,5 +1,7 @@
 import XCTest
 @testable import PlaceAlertMe
+
+#if os(iOS)
 import CoreLocation
 
 class PlaceAlertMeTests: XCTestCase {
@@ -324,3 +326,4 @@ class MockLocationManagerDelegate: LocationManagerDelegate {
         // Mock implementation
     }
 }
+#endif

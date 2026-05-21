@@ -44,6 +44,9 @@ let package = Package(
             publicHeadersPath: ".",
             cxxSettings: [
                 .define("_USE_MATH_DEFINES")
+            ],
+            linkerSettings: [
+                .linkedLibrary("c++")
             ]
         ),
         // Swift API. Sample UIKit demo file is excluded so the library
