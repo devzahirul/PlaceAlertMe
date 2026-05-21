@@ -33,7 +33,7 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     func requestLocationPermission() {
-        if #available(iOS 14.0, *) {
+        if #available(iOS 13.4, *) {
             let status = locationManager.authorizationStatus
             if status == .notDetermined {
                 locationManager.requestAlwaysAndWhenInUseAuthorization()
