@@ -2,6 +2,7 @@ import Foundation
 
 #if os(iOS)
 import CoreLocation
+import GeoEngineWrapper
 
 internal class GeoEngineManager {
     static let shared = GeoEngineManager()
