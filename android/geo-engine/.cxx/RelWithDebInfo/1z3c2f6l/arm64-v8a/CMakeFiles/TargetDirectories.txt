@@ -1,0 +1,4 @@
+/Users/lynkto_1/PlaceAlertMe/android/geo-engine/.cxx/RelWithDebInfo/1z3c2f6l/arm64-v8a/CMakeFiles/geo_engine_core.dir
+/Users/lynkto_1/PlaceAlertMe/android/geo-engine/.cxx/RelWithDebInfo/1z3c2f6l/arm64-v8a/CMakeFiles/geo_engine_jni.dir
+/Users/lynkto_1/PlaceAlertMe/android/geo-engine/.cxx/RelWithDebInfo/1z3c2f6l/arm64-v8a/CMakeFiles/edit_cache.dir
+/Users/lynkto_1/PlaceAlertMe/android/geo-engine/.cxx/RelWithDebInfo/1z3c2f6l/arm64-v8a/CMakeFiles/rebuild_cache.dir

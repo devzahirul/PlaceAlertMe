@@ -1,4 +1,6 @@
 import Foundation
+
+#if os(iOS)
 import CoreLocation
 import CoreMotion
 
@@ -76,3 +78,4 @@ extension TrackingCoordinator: ActivityRecognitionDelegate {
         }
     }
 }
+#endif

@@ -1,11 +1,15 @@
 import Foundation
+
+#if os(iOS)
 import CoreLocation
 
 internal protocol LocationManagerDelegate: AnyObject {
     func locationManager(_ manager: LocationManager, didUpdate location: CLLocation, response: GeoEngineResponse)
     func locationManager(_ manager: LocationManager, didChangeZoneStatus isInside: Bool)
 }
+#endif
 
+#if os(iOS)
 internal class LocationManager: NSObject, CLLocationManagerDelegate {
     weak var delegate: LocationManagerDelegate?
 
@@ -138,3 +142,4 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
 }
+#endif

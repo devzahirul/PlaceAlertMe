@@ -25,8 +25,7 @@ let package = Package(
             exclude: [
                 "geo_engine.h",
                 "CMakeLists.txt",
-                "tests",
-                "build"
+                "tests"
             ],
             sources: ["geo_engine.cpp"],
             publicHeadersPath: "include",

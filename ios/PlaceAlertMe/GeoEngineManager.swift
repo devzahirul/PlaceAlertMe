@@ -1,4 +1,6 @@
 import Foundation
+
+#if os(iOS)
 import CoreLocation
 
 internal class GeoEngineManager {
@@ -39,3 +41,4 @@ struct GeoEngineResponse {
         return TimeInterval(nextIntervalMs) / 1000.0
     }
 }
+#endif

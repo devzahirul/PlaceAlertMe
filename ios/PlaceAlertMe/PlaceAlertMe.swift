@@ -1,7 +1,6 @@
 import Foundation
-import CoreLocation
-import CoreMotion
 
+#if os(iOS)
 /**
  * Main public API for PlaceAlertMe geofencing
  * Simple one-step integration for iOS apps
@@ -157,3 +156,4 @@ public struct GeofenceStatus {
         TimeInterval(nextIntervalMs) / 1000.0
     }
 }
+#endif

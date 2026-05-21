@@ -273,11 +273,13 @@ class PlaceAlertMeTests: XCTestCase {
 
     // MARK: - ActivityRecognitionManager Tests
 
+    #if os(iOS)
     func testActivityRecognitionManagerInitialization() {
         let activityManager = ActivityRecognitionManager()
 
         XCTAssertNotNil(activityManager, "Activity manager should initialize")
     }
+    #endif
 
     // MARK: - TrackingCoordinator Tests
 
