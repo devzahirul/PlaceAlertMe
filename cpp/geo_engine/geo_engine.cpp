@@ -1,7 +1,10 @@
 #include "include/geo_engine.h"
+#ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
+#endif
 #include <cmath>
 #include <algorithm>
+#include <limits>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -18,6 +21,7 @@ GeoEngine::~GeoEngine() {}
 
 void GeoEngine::initialize(const std::vector<GeofenceZone>& zones) {
     this->zones = zones;
+    insideStates.clear();
     hasLastLocation = false;
 }
 
@@ -28,6 +32,7 @@ void GeoEngine::addZone(const GeofenceZone& zone) {
 void GeoEngine::removeZone(size_t index) {
     if (index < zones.size()) {
         zones.erase(zones.begin() + index);
+        insideStates.clear();
     }
 }
 
@@ -37,6 +42,7 @@ size_t GeoEngine::getZoneCount() const {
 
 void GeoEngine::clearZones() {
     zones.clear();
+    insideStates.clear();
 }
 
 double GeoEngine::calculateDistance(double lat1, double lon1, double lat2, double lon2) const {
@@ -63,7 +69,7 @@ std::pair<bool, double> GeoEngine::checkZoneContainment(const UserLocation& loca
         double distance = calculateDistance(location.latitude, location.longitude,
                                            zone.latitude, zone.longitude);
 
-        if (distance < zone.radiusMeters) {
+        if (distance <= zone.radiusMeters) {
             isInsideAny = true;
         }
 
@@ -112,24 +118,36 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
         return response;
     }
 
-    // Check zone containment
-    auto [isInside, distanceToNearest] = checkZoneContainment(location);
-
-    // Find the nearest zone for interval calculation
+    double distanceToNearest = std::numeric_limits<double>::max();
     double nearestZoneRadius = 100.0;  // Default radius
-    for (const auto& zone : zones) {
-        double dist = calculateDistance(location.latitude, location.longitude,
-                                       zone.latitude, zone.longitude);
-        if (dist == distanceToNearest) {
+    bool isInsideAny = false;
+
+    for (size_t i = 0; i < zones.size(); ++i) {
+        const auto& zone = zones[i];
+        const double distance = calculateDistance(location.latitude, location.longitude,
+                                                  zone.latitude, zone.longitude);
+        const bool isInside = distance <= zone.radiusMeters;
+        isInsideAny = isInsideAny || isInside;
+
+        if (distance < distanceToNearest) {
+            distanceToNearest = distance;
             nearestZoneRadius = zone.radiusMeters;
-            break;
+        }
+
+        const std::string key = keyForZone(i);
+        const bool wasInside = insideStates.count(key) > 0 ? insideStates[key] : false;
+        if (wasInside != isInside) {
+            insideStates[key] = isInside;
+            if (shouldNotify(zone, isInside)) {
+                response.transitions.emplace_back(zone.id, isInside, distance, static_cast<int>(i));
+            }
         }
     }
 
     // Calculate adaptive interval
     int64_t nextInterval = calculateAdaptiveInterval(location.speedMps, distanceToNearest, nearestZoneRadius);
 
-    response.isInsideZone = isInside;
+    response.isInsideZone = isInsideAny;
     response.nextIntervalMs = nextInterval;
     response.distanceMeters = distanceToNearest;
 
@@ -137,6 +155,89 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
     hasLastLocation = true;
 
     return response;
+}
+
+bool GeoEngine::updateZoneState(const std::string& zoneId, bool isInside,
+                                ZoneTransition& transition) {
+    const int index = findZoneIndexById(zoneId);
+    if (index < 0) {
+        return false;
+    }
+
+    const auto& zone = zones[static_cast<size_t>(index)];
+    const std::string key = keyForZone(static_cast<size_t>(index));
+    const bool wasInside = insideStates.count(key) > 0 ? insideStates[key] : false;
+
+    if (wasInside == isInside) {
+        return false;
+    }
+
+    insideStates[key] = isInside;
+    if (!shouldNotify(zone, isInside)) {
+        return false;
+    }
+
+    transition = ZoneTransition(zone.id, isInside, 0.0, index);
+    return true;
+}
+
+std::vector<NearestZone> GeoEngine::nearestZones(double latitude, double longitude,
+                                                 size_t maxCount) const {
+    std::vector<NearestZone> nearest;
+    nearest.reserve(zones.size());
+
+    for (size_t i = 0; i < zones.size(); ++i) {
+        const auto& zone = zones[i];
+        const double distance = calculateDistance(latitude, longitude,
+                                                  zone.latitude, zone.longitude);
+        nearest.emplace_back(zone.id, static_cast<int>(i), distance);
+    }
+
+    std::sort(nearest.begin(), nearest.end(), [](const NearestZone& a, const NearestZone& b) {
+        if (a.distanceMeters == b.distanceMeters) {
+            return a.zoneIndex < b.zoneIndex;
+        }
+        return a.distanceMeters < b.distanceMeters;
+    });
+
+    if (nearest.size() > maxCount) {
+        nearest.resize(maxCount);
+    }
+    return nearest;
+}
+
+bool GeoEngine::hasMovedSignificantly(double fromLatitude, double fromLongitude,
+                                      double toLatitude, double toLongitude,
+                                      double thresholdMeters) const {
+    if (thresholdMeters <= 0.0) {
+        return true;
+    }
+    const double distance = calculateDistance(fromLatitude, fromLongitude,
+                                              toLatitude, toLongitude);
+    return distance >= thresholdMeters;
+}
+
+std::string GeoEngine::keyForZone(size_t index) const {
+    if (index >= zones.size()) {
+        return "";
+    }
+    if (!zones[index].id.empty()) {
+        return zones[index].id;
+    }
+    return "#" + std::to_string(index);
+}
+
+int GeoEngine::findZoneIndexById(const std::string& zoneId) const {
+    for (size_t i = 0; i < zones.size(); ++i) {
+        if (zones[i].id == zoneId) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+bool GeoEngine::shouldNotify(const GeofenceZone& zone, bool isInside) const {
+    return isInside ? zone.notifyOnEntry : zone.notifyOnExit;
 }
 
 }  // namespace geo_engine

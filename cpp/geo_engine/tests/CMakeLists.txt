@@ -13,7 +13,9 @@ include_directories(${CMAKE_SOURCE_DIR}/../include)
 # Add the geo_engine library
 add_library(geo_engine_lib STATIC
     ${CMAKE_SOURCE_DIR}/../geo_engine.cpp
+    ${CMAKE_SOURCE_DIR}/../history_engine.cpp
     ${CMAKE_SOURCE_DIR}/../include/geo_engine.h
+    ${CMAKE_SOURCE_DIR}/../include/history_engine.h
 )
 
 target_include_directories(geo_engine_lib PUBLIC

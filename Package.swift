@@ -27,7 +27,7 @@ let package = Package(
                 "CMakeLists.txt",
                 "tests"
             ],
-            sources: ["geo_engine.cpp"],
+            sources: ["geo_engine.cpp", "history_engine.cpp"],
             publicHeadersPath: "include",
             cxxSettings: [
                 .define("_USE_MATH_DEFINES")

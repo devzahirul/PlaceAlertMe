@@ -1,6 +1,12 @@
 #include <gtest/gtest.h>
 #include "geo_engine.h"
+#include "history_engine.h"
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <sys/stat.h>
+#include <unistd.h>
 
 using namespace geo_engine;
 
@@ -10,6 +16,26 @@ protected:
 
     void SetUp() override {
         engine.clearZones();
+    }
+};
+
+class NavigationHistoryEngineTest : public ::testing::Test {
+protected:
+    NavigationHistoryEngine history;
+    std::string directory;
+
+    void SetUp() override {
+        char templ[] = "/tmp/navigation_history_test_XXXXXX";
+        char* result = mkdtemp(templ);
+        ASSERT_NE(result, nullptr);
+        directory = result;
+    }
+
+    void TearDown() override {
+        std::remove((directory + "/2026-05-19.jsonl").c_str());
+        std::remove((directory + "/2026-05-20.jsonl").c_str());
+        std::remove((directory + "/2026-05-21.jsonl").c_str());
+        rmdir(directory.c_str());
     }
 };
 
@@ -239,14 +265,23 @@ TEST_F(GeoEngineTest, UserLocationConstruction) {
 
 TEST_F(GeoEngineTest, GeofenceZoneConstruction) {
     GeofenceZone zone1;
+    EXPECT_EQ(zone1.id, "");
     EXPECT_EQ(zone1.latitude, 0.0);
     EXPECT_EQ(zone1.longitude, 0.0);
     EXPECT_EQ(zone1.radiusMeters, 0.0);
+    EXPECT_TRUE(zone1.notifyOnEntry);
+    EXPECT_TRUE(zone1.notifyOnExit);
 
     GeofenceZone zone2(37.7749, -122.4194, 1000.0);
+    EXPECT_EQ(zone2.id, "");
     EXPECT_EQ(zone2.latitude, 37.7749);
     EXPECT_EQ(zone2.longitude, -122.4194);
     EXPECT_EQ(zone2.radiusMeters, 1000.0);
+
+    GeofenceZone zone3("home", 37.7749, -122.4194, 1000.0, true, false);
+    EXPECT_EQ(zone3.id, "home");
+    EXPECT_TRUE(zone3.notifyOnEntry);
+    EXPECT_FALSE(zone3.notifyOnExit);
 }
 
 TEST_F(GeoEngineTest, EngineResponseDefaults) {
@@ -254,6 +289,150 @@ TEST_F(GeoEngineTest, EngineResponseDefaults) {
     EXPECT_FALSE(response.isInsideZone);
     EXPECT_EQ(response.nextIntervalMs, 60000);
     EXPECT_EQ(response.distanceMeters, 0.0);
+    EXPECT_TRUE(response.transitions.empty());
+}
+
+TEST_F(GeoEngineTest, EmitsPerZoneEnterExitTransitionsOnce) {
+    engine.addZone({"home", 37.7749, -122.4194, 1000.0});
+
+    EngineResponse enter = engine.processLocation({37.7749, -122.4194, 0.0});
+    ASSERT_EQ(enter.transitions.size(), 1);
+    EXPECT_EQ(enter.transitions[0].zoneId, "home");
+    EXPECT_TRUE(enter.transitions[0].isInside);
+
+    EngineResponse duplicateEnter = engine.processLocation({37.7749, -122.4194, 0.0});
+    EXPECT_TRUE(duplicateEnter.transitions.empty());
+
+    EngineResponse exit = engine.processLocation({37.8, -122.5, 0.0});
+    ASSERT_EQ(exit.transitions.size(), 1);
+    EXPECT_EQ(exit.transitions[0].zoneId, "home");
+    EXPECT_FALSE(exit.transitions[0].isInside);
+}
+
+TEST_F(GeoEngineTest, TriggerFlagsSuppressNotificationsButKeepState) {
+    engine.addZone({"arrival-only", 37.7749, -122.4194, 1000.0, true, false});
+
+    EngineResponse enter = engine.processLocation({37.7749, -122.4194, 0.0});
+    ASSERT_EQ(enter.transitions.size(), 1);
+    EXPECT_TRUE(enter.transitions[0].isInside);
+
+    EngineResponse exit = engine.processLocation({37.8, -122.5, 0.0});
+    EXPECT_TRUE(exit.transitions.empty());
+
+    EngineResponse reenter = engine.processLocation({37.7749, -122.4194, 0.0});
+    ASSERT_EQ(reenter.transitions.size(), 1);
+    EXPECT_TRUE(reenter.transitions[0].isInside);
+}
+
+TEST_F(GeoEngineTest, PlatformZoneStateUpdatesUseSameDedup) {
+    engine.addZone({"office", 37.7749, -122.4194, 1000.0});
+
+    ZoneTransition transition;
+    EXPECT_TRUE(engine.updateZoneState("office", true, transition));
+    EXPECT_EQ(transition.zoneId, "office");
+    EXPECT_TRUE(transition.isInside);
+
+    ZoneTransition duplicate;
+    EXPECT_FALSE(engine.updateZoneState("office", true, duplicate));
+
+    ZoneTransition exit;
+    EXPECT_TRUE(engine.updateZoneState("office", false, exit));
+    EXPECT_EQ(exit.zoneId, "office");
+    EXPECT_FALSE(exit.isInside);
+}
+
+TEST_F(GeoEngineTest, NearestZonesAreSortedByDistance) {
+    engine.addZone({"far", 40.7128, -74.0060, 1000.0});
+    engine.addZone({"near", 37.7749, -122.4194, 1000.0});
+
+    auto nearest = engine.nearestZones(37.7750, -122.4194, 2);
+    ASSERT_EQ(nearest.size(), 2);
+    EXPECT_EQ(nearest[0].zoneId, "near");
+    EXPECT_EQ(nearest[1].zoneId, "far");
+    EXPECT_LT(nearest[0].distanceMeters, nearest[1].distanceMeters);
+}
+
+TEST_F(GeoEngineTest, SignificantMovementThreshold) {
+    EXPECT_FALSE(engine.hasMovedSignificantly(
+        37.7749, -122.4194,
+        37.7750, -122.4194,
+        500.0
+    ));
+
+    EXPECT_TRUE(engine.hasMovedSignificantly(
+        37.7749, -122.4194,
+        37.7849, -122.4194,
+        500.0
+    ));
+}
+
+TEST_F(NavigationHistoryEngineTest, RoutePointFilterKeepsUsefulPath) {
+    EXPECT_TRUE(history.appendRoutePoint(
+        directory,
+        "2026-05-21",
+        HistoryRoutePoint(1000, 23.7800, 90.4100, 0.0)
+    ));
+
+    EXPECT_FALSE(history.appendRoutePoint(
+        directory,
+        "2026-05-21",
+        HistoryRoutePoint(11000, 23.78001, 90.41001, 0.0)
+    ));
+
+    EXPECT_TRUE(history.appendRoutePoint(
+        directory,
+        "2026-05-21",
+        HistoryRoutePoint(70000, 23.78001, 90.41001, 0.0)
+    ));
+
+    HistoryDay day;
+    ASSERT_TRUE(history.loadDay(directory, "2026-05-21", day));
+    EXPECT_EQ(day.points.size(), 2);
+    EXPECT_EQ(day.summary.pointCount, 2);
+}
+
+TEST_F(NavigationHistoryEngineTest, AlertEventsArePersistedInDay) {
+    HistoryAlertEvent event;
+    event.id = "event-1";
+    event.alertId = "alert-1";
+    event.task = "Buy groceries";
+    event.place = "Market";
+    event.address = "Dhaka";
+    event.eventType = "Arriving";
+    event.timestampMs = 2000;
+    event.latitude = 23.7800;
+    event.longitude = 90.4100;
+
+    EXPECT_TRUE(history.appendAlertEvent(directory, "2026-05-21", event));
+
+    HistoryDay day;
+    ASSERT_TRUE(history.loadDay(directory, "2026-05-21", day));
+    ASSERT_EQ(day.alertEvents.size(), 1);
+    EXPECT_EQ(day.alertEvents[0].task, "Buy groceries");
+    EXPECT_EQ(day.summary.alertEventCount, 1);
+}
+
+TEST_F(NavigationHistoryEngineTest, ListsSummariesAndPrunesOldDays) {
+    EXPECT_TRUE(history.appendRoutePoint(
+        directory,
+        "2026-05-19",
+        HistoryRoutePoint(1000, 23.7800, 90.4100, 0.0)
+    ));
+    EXPECT_TRUE(history.appendRoutePoint(
+        directory,
+        "2026-05-21",
+        HistoryRoutePoint(2000, 23.7900, 90.4200, 0.0)
+    ));
+
+    auto summaries = history.listDaySummaries(directory);
+    ASSERT_EQ(summaries.size(), 2);
+    EXPECT_EQ(summaries[0].dayKey, "2026-05-21");
+    EXPECT_EQ(summaries[1].dayKey, "2026-05-19");
+
+    EXPECT_EQ(history.pruneBeforeDay(directory, "2026-05-20"), 1);
+    summaries = history.listDaySummaries(directory);
+    ASSERT_EQ(summaries.size(), 1);
+    EXPECT_EQ(summaries[0].dayKey, "2026-05-21");
 }
 
 // Integration Tests

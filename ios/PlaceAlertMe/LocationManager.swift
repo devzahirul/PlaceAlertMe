@@ -27,7 +27,16 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
     private func setupLocationManager() {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        locationManager.allowsBackgroundLocationUpdates = true
+
+        // Setting allowsBackgroundLocationUpdates = true triggers an
+        // NSInternalInconsistencyException if the host app doesn't declare
+        // "location" in UIBackgroundModes. Gate it on the Info.plist to avoid
+        // crashing apps that haven't (yet) configured background mode.
+        if let modes = Bundle.main.object(forInfoDictionaryKey: "UIBackgroundModes") as? [String],
+           modes.contains("location") {
+            locationManager.allowsBackgroundLocationUpdates = true
+        }
+
         locationManager.pausesLocationUpdatesAutomatically = false
         locationManager.distanceFilter = 5
     }

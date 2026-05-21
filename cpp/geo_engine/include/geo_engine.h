@@ -1,8 +1,11 @@
 #ifndef GEO_ENGINE_H
 #define GEO_ENGINE_H
 
-#include <vector>
 #include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace geo_engine {
 
@@ -24,14 +27,56 @@ struct UserLocation {
  * Represents a circular geofence zone
  */
 struct GeofenceZone {
+    std::string id;
     double latitude;
     double longitude;
     double radiusMeters;
+    bool notifyOnEntry;
+    bool notifyOnExit;
     
-    GeofenceZone() : latitude(0.0), longitude(0.0), radiusMeters(0.0) {}
+    GeofenceZone()
+        : id(""), latitude(0.0), longitude(0.0), radiusMeters(0.0),
+          notifyOnEntry(true), notifyOnExit(true) {}
     
     GeofenceZone(double lat, double lon, double radius)
-        : latitude(lat), longitude(lon), radiusMeters(radius) {}
+        : id(""), latitude(lat), longitude(lon), radiusMeters(radius),
+          notifyOnEntry(true), notifyOnExit(true) {}
+
+    GeofenceZone(std::string zoneId, double lat, double lon, double radius,
+                 bool entry = true, bool exit = true)
+        : id(std::move(zoneId)), latitude(lat), longitude(lon),
+          radiusMeters(radius), notifyOnEntry(entry), notifyOnExit(exit) {}
+};
+
+/**
+ * Per-zone transition emitted when a zone changes inside/outside state.
+ */
+struct ZoneTransition {
+    std::string zoneId;
+    bool isInside;
+    double distanceMeters;
+    int zoneIndex;
+
+    ZoneTransition()
+        : zoneId(""), isInside(false), distanceMeters(0.0), zoneIndex(-1) {}
+
+    ZoneTransition(std::string id, bool inside, double distance, int index)
+        : zoneId(std::move(id)), isInside(inside), distanceMeters(distance),
+          zoneIndex(index) {}
+};
+
+/**
+ * Nearest-zone result for platform region registration.
+ */
+struct NearestZone {
+    std::string zoneId;
+    int zoneIndex;
+    double distanceMeters;
+
+    NearestZone() : zoneId(""), zoneIndex(-1), distanceMeters(0.0) {}
+
+    NearestZone(std::string id, int index, double distance)
+        : zoneId(std::move(id)), zoneIndex(index), distanceMeters(distance) {}
 };
 
 /**
@@ -41,6 +86,7 @@ struct EngineResponse {
     bool isInsideZone;
     int64_t nextIntervalMs;  // Next tracking interval recommendation in milliseconds
     double distanceMeters;   // Distance to zone center
+    std::vector<ZoneTransition> transitions;
     
     EngineResponse() 
         : isInsideZone(false), nextIntervalMs(60000), distanceMeters(0.0) {}
@@ -79,6 +125,27 @@ public:
      * @param index Index of zone to remove
      */
     void removeZone(size_t index);
+
+    /**
+     * Update one zone's inside/outside state from a platform-native
+     * geofence event. Returns true only when this is a real transition
+     * whose entry/exit flag allows notification.
+     */
+    bool updateZoneState(const std::string& zoneId, bool isInside,
+                         ZoneTransition& transition);
+
+    /**
+     * Return the nearest zones to a coordinate, sorted by distance.
+     */
+    std::vector<NearestZone> nearestZones(double latitude, double longitude,
+                                          size_t maxCount) const;
+
+    /**
+     * Shared movement threshold check for platform adapters.
+     */
+    bool hasMovedSignificantly(double fromLatitude, double fromLongitude,
+                               double toLatitude, double toLongitude,
+                               double thresholdMeters) const;
     
     /**
      * Get number of managed zones
@@ -93,6 +160,7 @@ public:
 
 private:
     std::vector<GeofenceZone> zones;
+    std::unordered_map<std::string, bool> insideStates;
     UserLocation lastLocation;
     bool hasLastLocation;
     
@@ -122,6 +190,10 @@ private:
      * @return Pair of (isInside, distanceToNearestZone)
      */
     std::pair<bool, double> checkZoneContainment(const UserLocation& location) const;
+
+    std::string keyForZone(size_t index) const;
+    int findZoneIndexById(const std::string& zoneId) const;
+    bool shouldNotify(const GeofenceZone& zone, bool isInside) const;
 };
 
 }  // namespace geo_engine
