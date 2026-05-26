@@ -1,64 +1,73 @@
 package com.placealertme.geofence
 
-/**
- * JNI bridge to C++ geo_engine
- * Handles direct communication with the native geofencing engine
- */
+import org.json.JSONObject
+import org.json.JSONArray
+
 object GeoEngineJNI {
     init {
         System.loadLibrary("geo_engine_jni")
     }
 
-    /**
-     * Initialize the geofencing engine
-     */
     external fun initializeEngine()
 
-    /**
-     * Add a geofence zone
-     * @param latitude Zone center latitude (-90 to 90)
-     * @param longitude Zone center longitude (-180 to 180)
-     * @param radiusMeters Zone radius in meters (> 0)
-     */
-    external fun addZone(latitude: Double, longitude: Double, radiusMeters: Double)
-
-    /**
-     * Process a location update
-     * @param latitude Current latitude
-     * @param longitude Current longitude
-     * @param speedMps Speed in meters per second
-     * @return LongArray [isInsideZone (0/1), nextIntervalMs, distanceMeters]
-     */
-    external fun processLocation(latitude: Double, longitude: Double, speedMps: Double): LongArray
-
-    /**
-     * Clear all zones
-     */
-    external fun clearZones()
-
-    /**
-     * Get count of managed zones
-     */
-    external fun getZoneCount(): Int
-
-    /**
-     * Engine response data class
-     */
-    data class EngineResponse(
-        val isInsideZone: Boolean,
-        val nextIntervalMs: Long,
-        val distanceMeters: Double
+    external fun addZone(
+        id: String, name: String,
+        latitude: Double, longitude: Double, radiusMeters: Double
     )
 
-    /**
-     * Wrapper to convert JNI response to data class
-     */
-    fun processLocationWrapped(latitude: Double, longitude: Double, speedMps: Double): EngineResponse {
-        val response = processLocation(latitude, longitude, speedMps)
+    external fun removeZoneById(id: String)
+
+    // Returns JSON string from C++
+    external fun processLocation(
+        latitude: Double, longitude: Double, speedMps: Double,
+        accuracyMeters: Double, timestampMs: Long
+    ): String
+
+    external fun clearZones()
+    external fun getZoneCount(): Int
+
+    data class ZoneTransition(
+        val zoneId: String,
+        val zoneName: String,
+        val type: String,        // "ENTER" or "EXIT"
+        val distanceMeters: Double,
+        val timestampMs: Long
+    )
+
+    data class EngineResponse(
+        val isInsideAnyZone: Boolean,
+        val nextIntervalMs: Long,
+        val distanceToNearestMeters: Double,
+        val transitions: List<ZoneTransition>
+    )
+
+    fun processLocationWrapped(
+        latitude: Double, longitude: Double, speedMps: Double,
+        accuracyMeters: Double, timestampMs: Long
+    ): EngineResponse {
+        val json = processLocation(latitude, longitude, speedMps, accuracyMeters, timestampMs)
+        return parseEngineResponse(json)
+    }
+
+    private fun parseEngineResponse(json: String): EngineResponse {
+        val obj = JSONObject(json)
+        val transitions = mutableListOf<ZoneTransition>()
+        val arr: JSONArray = obj.optJSONArray("transitions") ?: JSONArray()
+        for (i in 0 until arr.length()) {
+            val t = arr.getJSONObject(i)
+            transitions.add(ZoneTransition(
+                zoneId        = t.getString("zoneId"),
+                zoneName      = t.getString("zoneName"),
+                type          = t.getString("type"),
+                distanceMeters = t.getDouble("distanceMeters"),
+                timestampMs   = t.getLong("timestampMs")
+            ))
+        }
         return EngineResponse(
-            isInsideZone = response[0] != 0L,
-            nextIntervalMs = response[1],
-            distanceMeters = response[2].toDouble()
+            isInsideAnyZone        = obj.getInt("isInsideAny") != 0,
+            nextIntervalMs         = obj.getLong("nextIntervalMs"),
+            distanceToNearestMeters = obj.getDouble("distanceMeters"),
+            transitions            = transitions
         )
     }
 }

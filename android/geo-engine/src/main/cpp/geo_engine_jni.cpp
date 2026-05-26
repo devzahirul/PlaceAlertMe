@@ -1,77 +1,90 @@
 #include <jni.h>
 #include "geo_engine.h"
 #include <memory>
+#include <string>
+#include <sstream>
 
-// Global engine instance
 static std::unique_ptr<geo_engine::GeoEngine> g_engine = nullptr;
+
+// Build a JSON string from EngineResponse for return to Kotlin.
+// Uses manual construction to avoid any third-party dependency.
+static std::string responseToJson(const geo_engine::EngineResponse& r) {
+    std::ostringstream os;
+    os << "{\"isInsideAny\":" << (r.isInsideAnyZone ? 1 : 0)
+       << ",\"nextIntervalMs\":" << r.nextIntervalMs
+       << ",\"distanceMeters\":" << r.distanceToNearestMeters
+       << ",\"transitions\":[";
+    for (size_t i = 0; i < r.transitions.size(); ++i) {
+        const auto& t = r.transitions[i];
+        if (i > 0) os << ",";
+        os << "{\"zoneId\":\"" << t.zoneId << "\""
+           << ",\"zoneName\":\"" << t.zoneName << "\""
+           << ",\"type\":\"" << (t.type == geo_engine::TransitionType::ENTER ? "ENTER" : "EXIT") << "\""
+           << ",\"distanceMeters\":" << t.distanceMeters
+           << ",\"timestampMs\":" << t.timestampMs
+           << "}";
+    }
+    os << "]}";
+    return os.str();
+}
 
 extern "C" {
 
-/**
- * JNI function: Initialize the geofencing engine
- */
 JNIEXPORT void JNICALL
-Java_com_placealertme_geofence_GeoEngineJNI_initializeEngine(JNIEnv* env, jobject thiz) {
+Java_com_placealertme_geofence_GeoEngineJNI_initializeEngine(JNIEnv*, jobject) {
     if (!g_engine) {
         g_engine = std::make_unique<geo_engine::GeoEngine>();
     }
 }
 
-/**
- * JNI function: Add a geofence zone
- */
 JNIEXPORT void JNICALL
-Java_com_placealertme_geofence_GeoEngineJNI_addZone(JNIEnv* env, jobject thiz,
+Java_com_placealertme_geofence_GeoEngineJNI_addZone(JNIEnv* env, jobject,
+                                                     jstring id, jstring name,
                                                      jdouble latitude, jdouble longitude,
                                                      jdouble radiusMeters) {
-    if (g_engine) {
-        geo_engine::GeofenceZone zone(latitude, longitude, radiusMeters);
-        g_engine->addZone(zone);
-    }
+    if (!g_engine) return;
+    const char* cId   = env->GetStringUTFChars(id,   nullptr);
+    const char* cName = env->GetStringUTFChars(name, nullptr);
+    geo_engine::GeofenceZone zone(cId, cName, latitude, longitude, radiusMeters);
+    g_engine->addZone(zone);
+    env->ReleaseStringUTFChars(id,   cId);
+    env->ReleaseStringUTFChars(name, cName);
 }
 
-/**
- * JNI function: Process location update
- * Returns: [isInsideZone (0/1), nextIntervalMs, distanceMeters]
- */
-JNIEXPORT jlongArray JNICALL
-Java_com_placealertme_geofence_GeoEngineJNI_processLocation(JNIEnv* env, jobject thiz,
-                                                             jdouble latitude, jdouble longitude,
-                                                             jdouble speedMps) {
-    jlongArray result = env->NewLongArray(3);
-    jlong values[3] = {0, 60000, 0};
-
-    if (g_engine) {
-        geo_engine::UserLocation location(latitude, longitude, speedMps);
-        geo_engine::EngineResponse response = g_engine->processLocation(location);
-
-        values[0] = response.isInsideZone ? 1 : 0;
-        values[1] = response.nextIntervalMs;
-        values[2] = (jlong)response.distanceMeters;
-    }
-
-    env->SetLongArrayRegion(result, 0, 3, values);
-    return result;
-}
-
-/**
- * JNI function: Clear all zones
- */
 JNIEXPORT void JNICALL
-Java_com_placealertme_geofence_GeoEngineJNI_clearZones(JNIEnv* env, jobject thiz) {
-    if (g_engine) {
-        g_engine->clearZones();
-    }
+Java_com_placealertme_geofence_GeoEngineJNI_removeZoneById(JNIEnv* env, jobject,
+                                                            jstring id) {
+    if (!g_engine) return;
+    const char* cId = env->GetStringUTFChars(id, nullptr);
+    g_engine->removeZone(cId);
+    env->ReleaseStringUTFChars(id, cId);
 }
 
-/**
- * JNI function: Get zone count
- */
-JNIEXPORT jint JNICALL
-Java_com_placealertme_geofence_GeoEngineJNI_getZoneCount(JNIEnv* env, jobject thiz) {
+// Returns JSON string: {"isInsideAny":0,"nextIntervalMs":10000,"distanceMeters":500,"transitions":[...]}
+JNIEXPORT jstring JNICALL
+Java_com_placealertme_geofence_GeoEngineJNI_processLocation(JNIEnv* env, jobject,
+                                                             jdouble latitude, jdouble longitude,
+                                                             jdouble speedMps,
+                                                             jdouble accuracyMeters,
+                                                             jlong   timestampMs) {
+    std::string json = "{\"isInsideAny\":0,\"nextIntervalMs\":60000,\"distanceMeters\":0,\"transitions\":[]}";
     if (g_engine) {
-        return (jint)g_engine->getZoneCount();
+        geo_engine::UserLocation loc(latitude, longitude, speedMps,
+                                     accuracyMeters, (int64_t)timestampMs);
+        geo_engine::EngineResponse response = g_engine->processLocation(loc);
+        json = responseToJson(response);
     }
+    return env->NewStringUTF(json.c_str());
+}
+
+JNIEXPORT void JNICALL
+Java_com_placealertme_geofence_GeoEngineJNI_clearZones(JNIEnv*, jobject) {
+    if (g_engine) g_engine->clearZones();
+}
+
+JNIEXPORT jint JNICALL
+Java_com_placealertme_geofence_GeoEngineJNI_getZoneCount(JNIEnv*, jobject) {
+    if (g_engine) return (jint)g_engine->getZoneCount();
     return 0;
 }
 

@@ -2,126 +2,108 @@
 #define GEO_ENGINE_H
 
 #include <vector>
+#include <string>
+#include <unordered_map>
 #include <cstdint>
+#include <limits>
 
 namespace geo_engine {
 
-/**
- * Represents a geographic coordinate with speed information
- */
+// Life360-parity constants
+static constexpr double  MIN_RADIUS_METERS        = 150.0;
+static constexpr double  MAX_ACCURACY_METERS       = 65.0;
+static constexpr double  EXIT_BUFFER_METERS        = 50.0;
+static constexpr int64_t DWELL_ENTRY_MS            = 10000;
+static constexpr int64_t DWELL_EXIT_MS             = 10000;
+static constexpr int64_t ACCURACY_WAIT_INTERVAL_MS = 5000;
+
 struct UserLocation {
-    double latitude;
-    double longitude;
-    double speedMps;  // Speed in meters per second
-    
-    UserLocation() : latitude(0.0), longitude(0.0), speedMps(0.0) {}
-    
-    UserLocation(double lat, double lon, double speed)
-        : latitude(lat), longitude(lon), speedMps(speed) {}
+    double  latitude;
+    double  longitude;
+    double  speedMps;
+    double  accuracyMeters;
+    int64_t timestampMs;
+
+    UserLocation()
+        : latitude(0.0), longitude(0.0), speedMps(0.0),
+          accuracyMeters(0.0), timestampMs(0) {}
+
+    UserLocation(double lat, double lon, double speed,
+                 double accuracy = 10.0, int64_t ts = 0)
+        : latitude(lat), longitude(lon), speedMps(speed),
+          accuracyMeters(accuracy), timestampMs(ts) {}
 };
 
-/**
- * Represents a circular geofence zone
- */
 struct GeofenceZone {
+    std::string id;
+    std::string name;
     double latitude;
     double longitude;
     double radiusMeters;
-    
-    GeofenceZone() : latitude(0.0), longitude(0.0), radiusMeters(0.0) {}
-    
-    GeofenceZone(double lat, double lon, double radius)
-        : latitude(lat), longitude(lon), radiusMeters(radius) {}
+    double exitBufferMeters;
+
+    GeofenceZone()
+        : latitude(0.0), longitude(0.0),
+          radiusMeters(MIN_RADIUS_METERS), exitBufferMeters(EXIT_BUFFER_METERS) {}
+
+    GeofenceZone(const std::string& id, const std::string& name,
+                 double lat, double lon, double radius)
+        : id(id), name(name), latitude(lat), longitude(lon),
+          radiusMeters(radius < MIN_RADIUS_METERS ? MIN_RADIUS_METERS : radius),
+          exitBufferMeters(EXIT_BUFFER_METERS) {}
 };
 
-/**
- * Engine response containing zone status and recommended tracking interval
- */
+enum class TransitionType { ENTER, EXIT };
+
+struct ZoneTransition {
+    std::string    zoneId;
+    std::string    zoneName;
+    TransitionType type;
+    double         distanceMeters;
+    int64_t        timestampMs;
+};
+
 struct EngineResponse {
-    bool isInsideZone;
-    int64_t nextIntervalMs;  // Next tracking interval recommendation in milliseconds
-    double distanceMeters;   // Distance to zone center
-    
-    EngineResponse() 
-        : isInsideZone(false), nextIntervalMs(60000), distanceMeters(0.0) {}
+    bool                       isInsideAnyZone      = false;
+    int64_t                    nextIntervalMs        = 60000;
+    double                     distanceToNearestMeters = 0.0;
+    std::vector<ZoneTransition> transitions;
 };
 
-/**
- * Core geofencing engine
- * Handles distance calculations, zone detection, and adaptive interval management
- */
+// Per-zone state machine state (private to engine, exposed in header for tests)
+enum class ZoneState { OUTSIDE, PENDING_ENTER, INSIDE, PENDING_EXIT };
+
+struct ZoneStatus {
+    ZoneState state              = ZoneState::OUTSIDE;
+    int64_t   pendingStateStartMs = 0;
+};
+
 class GeoEngine {
 public:
     GeoEngine();
     ~GeoEngine();
-    
-    /**
-     * Initialize the engine with geofence zones
-     * @param zones Vector of GeofenceZone objects
-     */
+
     void initialize(const std::vector<GeofenceZone>& zones);
-    
-    /**
-     * Process a user location and return engine response
-     * @param location Current user location
-     * @return EngineResponse containing zone status and next tracking interval
-     */
     EngineResponse processLocation(const UserLocation& location);
-    
-    /**
-     * Add a new geofence zone
-     * @param zone GeofenceZone to add
-     */
-    void addZone(const GeofenceZone& zone);
-    
-    /**
-     * Remove a geofence zone by index
-     * @param index Index of zone to remove
-     */
-    void removeZone(size_t index);
-    
-    /**
-     * Get number of managed zones
-     * @return Number of zones
-     */
+
+    void   addZone(const GeofenceZone& zone);
+    void   removeZone(const std::string& zoneId);
     size_t getZoneCount() const;
-    
-    /**
-     * Clear all zones
-     */
-    void clearZones();
+    void   clearZones();
+
+    // Exposed for testing
+    ZoneState getZoneState(const std::string& zoneId) const;
 
 private:
-    std::vector<GeofenceZone> zones;
+    std::vector<GeofenceZone>                    zones;
+    std::unordered_map<std::string, ZoneStatus>  zoneStates;
     UserLocation lastLocation;
-    bool hasLastLocation;
-    
-    /**
-     * Calculate distance between two coordinates using Haversine formula
-     * @param lat1 Latitude of point 1
-     * @param lon1 Longitude of point 1
-     * @param lat2 Latitude of point 2
-     * @param lon2 Longitude of point 2
-     * @return Distance in meters
-     */
-    double calculateDistance(double lat1, double lon1, double lat2, double lon2) const;
-    
-    /**
-     * Calculate adaptive tracking interval based on speed and distance
-     * @param speedMps Speed in meters per second
-     * @param distanceToNearestZone Distance to nearest zone center
-     * @param radiusOfNearestZone Radius of nearest zone
-     * @return Recommended next interval in milliseconds
-     */
-    int64_t calculateAdaptiveInterval(double speedMps, double distanceToNearestZone,
-                                      double radiusOfNearestZone, bool isInsideZone) const;
-    
-    /**
-     * Check if location is inside any geofence zone
-     * @param location User location
-     * @return Pair of (isInside, distanceToNearestZone)
-     */
-    std::pair<bool, double> checkZoneContainment(const UserLocation& location) const;
+    bool         hasLastLocation;
+
+    double  calculateDistance(double lat1, double lon1,
+                              double lat2, double lon2) const;
+    int64_t calculateAdaptiveInterval(double speedMps,
+                                      double distanceToBoundary) const;
 };
 
 }  // namespace geo_engine

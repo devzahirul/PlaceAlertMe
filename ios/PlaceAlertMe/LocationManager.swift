@@ -3,17 +3,17 @@ import CoreLocation
 
 internal protocol LocationManagerDelegate: AnyObject {
     func locationManager(_ manager: LocationManager, didUpdate location: CLLocation, response: GeoEngineResponse)
-    func locationManager(_ manager: LocationManager, didChangeZoneStatus isInside: Bool)
+    func locationManager(_ manager: LocationManager, didTransition transition: ZoneTransition)
 }
 
 internal class LocationManager: NSObject, CLLocationManagerDelegate {
     weak var delegate: LocationManagerDelegate?
 
-    private let locationManager = CLLocationManager()
+    private let clLocationManager = CLLocationManager()
     private let geoEngineManager = GeoEngineManager.shared
     private var currentIntervalMs: Int64 = 10000
-    private var lastZoneStatus = false
     private var updateTimer: Timer?
+    var activityScaleFactor: Double = 1.0
 
     override init() {
         super.init()
@@ -21,51 +21,79 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     private func setupLocationManager() {
-        locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        locationManager.pausesLocationUpdatesAutomatically = false
-        locationManager.distanceFilter = 5
+        clLocationManager.delegate = self
+        clLocationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        clLocationManager.pausesLocationUpdatesAutomatically = false
+        clLocationManager.distanceFilter = 5
     }
 
     func requestLocationPermission() {
         if #available(iOS 14.0, *) {
-            let status = locationManager.authorizationStatus
+            let status = clLocationManager.authorizationStatus
             if status == .notDetermined {
-                locationManager.requestAlwaysAndWhenInUseAuthorization()
+                clLocationManager.requestAlwaysAuthorization()
             }
         } else {
-            locationManager.requestAlwaysAuthorization()
+            clLocationManager.requestAlwaysAuthorization()
         }
     }
 
     func startTracking() {
         requestLocationPermission()
-        locationManager.allowsBackgroundLocationUpdates = true
-        locationManager.startUpdatingLocation()
+        clLocationManager.allowsBackgroundLocationUpdates = true
+        let records = PlaceStore.shared.load()
+        for record in records {
+            geoEngineManager.addZone(id: record.id, name: record.name,
+                                     latitude: record.latitude, longitude: record.longitude,
+                                     radiusMeters: record.radiusMeters)
+            registerCLRegion(id: record.id, latitude: record.latitude,
+                             longitude: record.longitude, radiusMeters: record.radiusMeters)
+        }
+        clLocationManager.startUpdatingLocation()
     }
 
     func stopTracking() {
-        locationManager.stopUpdatingLocation()
+        clLocationManager.stopUpdatingLocation()
         updateTimer?.invalidate()
         updateTimer = nil
     }
 
     func pauseTracking() {
-        locationManager.stopUpdatingLocation()
+        clLocationManager.stopUpdatingLocation()
         updateTimer?.invalidate()
         updateTimer = nil
     }
 
     func resumeTracking() {
-        locationManager.startUpdatingLocation()
+        clLocationManager.startUpdatingLocation()
     }
 
-    func addGeofenceZone(latitude: Double, longitude: Double, radiusMeters: Double) {
-        geoEngineManager.addZone(latitude: latitude, longitude: longitude, radiusMeters: radiusMeters)
+    func addGeofenceZone(id: String, name: String, latitude: Double, longitude: Double, radiusMeters: Double) {
+        geoEngineManager.addZone(id: id, name: name,
+                                 latitude: latitude, longitude: longitude,
+                                 radiusMeters: radiusMeters)
+        PlaceStore.shared.add(PlaceRecord(id: id, name: name,
+                                          latitude: latitude, longitude: longitude,
+                                          radiusMeters: radiusMeters))
+        registerCLRegion(id: id, latitude: latitude, longitude: longitude, radiusMeters: radiusMeters)
     }
 
     func clearGeofenceZones() {
         geoEngineManager.clearZones()
+        PlaceStore.shared.clear()
+        for region in clLocationManager.monitoredRegions {
+            clLocationManager.stopMonitoring(for: region)
+        }
+    }
+
+    private func registerCLRegion(id: String, latitude: Double, longitude: Double, radiusMeters: Double) {
+        guard clLocationManager.monitoredRegions.count < 20 else { return }
+        let center = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        let effectiveRadius = max(radiusMeters, 150.0)
+        let region = CLCircularRegion(center: center, radius: effectiveRadius, identifier: id)
+        region.notifyOnEntry = true
+        region.notifyOnExit = true
+        clLocationManager.startMonitoring(for: region)
     }
 
     // MARK: - CLLocationManagerDelegate
@@ -74,18 +102,22 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
         guard let location = locations.last else { return }
 
         let speed = location.speed >= 0 ? location.speed : 0
+        let accuracyMeters = location.horizontalAccuracy
+        let timestampMs = Int64(location.timestamp.timeIntervalSince1970 * 1000)
+
         let response = geoEngineManager.processLocation(
             latitude: location.coordinate.latitude,
             longitude: location.coordinate.longitude,
-            speedMps: speed
+            speedMps: speed,
+            accuracyMeters: accuracyMeters,
+            timestampMs: timestampMs
         )
 
-        updateLocationAccuracy(basedOnDistance: response.distanceMeters)
+        updateLocationAccuracy(basedOnDistance: response.distanceToNearestMeters)
         updateTrackingInterval(response.nextIntervalMs)
 
-        if response.isInsideZone != lastZoneStatus {
-            lastZoneStatus = response.isInsideZone
-            delegate?.locationManager(self, didChangeZoneStatus: response.isInsideZone)
+        for transition in response.transitions {
+            delegate?.locationManager(self, didTransition: transition)
         }
 
         delegate?.locationManager(self, didUpdate: location, response: response)
@@ -104,6 +136,14 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
 
+    func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
+        manager.requestLocation()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
+        manager.requestLocation()
+    }
+
     // MARK: - Adaptive Tracking
 
     private func updateLocationAccuracy(basedOnDistance distance: Double) {
@@ -119,22 +159,21 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
             accuracy = kCLLocationAccuracyHundredMeters
         }
 
-        if locationManager.desiredAccuracy != accuracy {
-            locationManager.desiredAccuracy = accuracy
+        if clLocationManager.desiredAccuracy != accuracy {
+            clLocationManager.desiredAccuracy = accuracy
         }
     }
 
     private func updateTrackingInterval(_ newIntervalMs: Int64) {
-        if newIntervalMs == currentIntervalMs {
-            return
-        }
+        let scaledMs = Int64(Double(newIntervalMs) * activityScaleFactor)
+        if scaledMs == currentIntervalMs { return }
 
-        currentIntervalMs = newIntervalMs
-        let intervalSeconds = Double(newIntervalMs) / 1000.0
+        currentIntervalMs = scaledMs
+        let intervalSeconds = Double(scaledMs) / 1000.0
 
         updateTimer?.invalidate()
         updateTimer = Timer.scheduledTimer(withTimeInterval: intervalSeconds, repeats: true) { [weak self] _ in
-            self?.locationManager.requestLocation()
+            self?.clLocationManager.requestLocation()
         }
     }
 }

@@ -1,50 +1,42 @@
 #ifndef GEO_ENGINE_WRAPPER_H
 #define GEO_ENGINE_WRAPPER_H
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * Result structure for C interface
- */
-struct GeoEngineResult {
-    bool isInsideZone;
-    long long nextIntervalMs;
-    double distanceMeters;
+// Per-zone transition (fixed array avoids heap alloc across C/C++ boundary;
+// 20-zone limit also matches iOS CLCircularRegion maximum)
+struct GeoEngineTransition {
+    char      zoneId[64];
+    char      zoneName[128];
+    int       type;           // 0 = ENTER, 1 = EXIT
+    double    distanceMeters;
+    long long timestampMs;
 };
 
-/**
- * Initialize the geofencing engine
- */
-void ios_geo_engine_initialize(void);
+struct GeoEngineResult {
+    bool      isInsideAnyZone;
+    long long nextIntervalMs;
+    double    distanceToNearestMeters;
+    int       transitionCount;
+    struct    GeoEngineTransition transitions[20];
+};
 
-/**
- * Add a geofence zone
- * @param latitude Zone center latitude
- * @param longitude Zone center longitude
- * @param radiusMeters Zone radius in meters
- */
-void ios_geo_engine_add_zone(double latitude, double longitude, double radiusMeters);
-
-/**
- * Process location update
- * @param latitude Current latitude
- * @param longitude Current longitude
- * @param speedMps Speed in meters per second
- * @return GeoEngineResult with zone status and recommendations
- */
-struct GeoEngineResult ios_geo_engine_process_location(double latitude, double longitude, double speedMps);
-
-/**
- * Clear all zones
- */
-void ios_geo_engine_clear_zones(void);
-
-/**
- * Get count of managed zones
- */
-int ios_geo_engine_get_zone_count(void);
+void                   ios_geo_engine_initialize(void);
+void                   ios_geo_engine_add_zone(const char* id, const char* name,
+                                                double latitude, double longitude,
+                                                double radiusMeters);
+void                   ios_geo_engine_remove_zone(const char* id);
+struct GeoEngineResult ios_geo_engine_process_location(double latitude, double longitude,
+                                                        double speedMps,
+                                                        double accuracyMeters,
+                                                        long long timestampMs);
+void                   ios_geo_engine_clear_zones(void);
+int                    ios_geo_engine_get_zone_count(void);
 
 #ifdef __cplusplus
 }
