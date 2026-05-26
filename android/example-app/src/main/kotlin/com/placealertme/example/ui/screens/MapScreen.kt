@@ -205,10 +205,14 @@ fun setupMapView(
 
     if (selectedLocation != null) {
         val items = listOf(OverlayItem("Selected", "Tap location", selectedLocation))
-        val overlay = ItemizedIconOverlay(items, null, object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
-            override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean = true
-            override fun onItemLongPress(index: Int, item: OverlayItem?): Boolean = true
-        })
+        val overlay = ItemizedIconOverlay(
+            items,
+            object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
+                override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean = true
+                override fun onItemLongPress(index: Int, item: OverlayItem?): Boolean = true
+            },
+            mapView.context
+        )
         mapView.overlays.add(overlay)
         mapView.controller.setCenter(selectedLocation)
     }

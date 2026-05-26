@@ -2,130 +2,41 @@
 #define GEO_ENGINE_WRAPPER_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * Result structure for C interface
- */
-struct GeoEngineResult {
-    bool isInsideZone;
-    long long nextIntervalMs;
-    double distanceMeters;
-    int transitionCount;
-};
-
-/**
- * Per-zone transition returned by the C++ decision layer.
- * zoneId points to wrapper-owned storage that is valid until the next
- * ios_geo_engine_* call on the same thread. Swift copies it immediately.
- */
+// Per-zone transition (fixed array avoids heap alloc across C/C++ boundary;
+// 20-zone limit also matches iOS CLCircularRegion maximum)
 struct GeoEngineTransition {
-    const char *zoneId;
-    bool isInside;
-    int zoneIndex;
-    double distanceMeters;
+    char      zoneId[64];
+    char      zoneName[128];
+    int       type;           // 0 = ENTER, 1 = EXIT
+    double    distanceMeters;
+    long long timestampMs;
 };
 
-/**
- * Nearest-zone result returned by the C++ decision layer.
- */
-struct GeoEngineNearestZone {
-    const char *zoneId;
-    int zoneIndex;
-    double distanceMeters;
+struct GeoEngineResult {
+    bool      isInsideAnyZone;
+    long long nextIntervalMs;
+    double    distanceToNearestMeters;
+    int       transitionCount;
+    struct    GeoEngineTransition transitions[20];
 };
 
-/**
- * Daily navigation-history summary returned by the C++ history layer.
- */
-struct NavigationHistoryDaySummaryResult {
-    const char *dayKey;
-    long long startTimestampMs;
-    long long endTimestampMs;
-    int pointCount;
-    int alertEventCount;
-    double distanceMeters;
-};
-
-/**
- * Initialize the geofencing engine
- */
-void ios_geo_engine_initialize(void);
-
-/**
- * Add a geofence zone
- * @param latitude Zone center latitude
- * @param longitude Zone center longitude
- * @param radiusMeters Zone radius in meters
- */
-void ios_geo_engine_add_zone(double latitude, double longitude, double radiusMeters);
-
-/**
- * Add an ID-based geofence zone.
- */
-void ios_geo_engine_add_zone_with_id(const char *zoneId,
-                                     double latitude,
-                                     double longitude,
-                                     double radiusMeters,
-                                     bool notifyOnEntry,
-                                     bool notifyOnExit);
-
-/**
- * Process location update
- * @param latitude Current latitude
- * @param longitude Current longitude
- * @param speedMps Speed in meters per second
- * @return GeoEngineResult with zone status and recommendations
- */
-struct GeoEngineResult ios_geo_engine_process_location(double latitude, double longitude, double speedMps);
-
-/**
- * Process location update and copy per-zone transition events into outTransitions.
- * @return GeoEngineResult whose transitionCount is the number copied.
- */
-struct GeoEngineResult ios_geo_engine_process_location_with_events(double latitude,
-                                                                   double longitude,
-                                                                   double speedMps,
-                                                                   struct GeoEngineTransition *outTransitions,
-                                                                   int maxTransitions);
-
-/**
- * Update a zone state from a platform-native geofence event. Returns true if
- * the event should be surfaced to the host app after C++ dedup + trigger filter.
- */
-bool ios_geo_engine_update_zone_state(const char *zoneId,
-                                      bool isInside,
-                                      struct GeoEngineTransition *outTransition);
-
-/**
- * Return nearest zones to the provided coordinate.
- */
-int ios_geo_engine_get_nearest_zones(double latitude,
-                                     double longitude,
-                                     struct GeoEngineNearestZone *outZones,
-                                     int maxZones);
-
-/**
- * Shared movement threshold check.
- */
-bool ios_geo_engine_has_moved_significantly(double fromLatitude,
-                                            double fromLongitude,
-                                            double toLatitude,
-                                            double toLongitude,
-                                            double thresholdMeters);
-
-/**
- * Clear all zones
- */
-void ios_geo_engine_clear_zones(void);
-
-/**
- * Get count of managed zones
- */
-int ios_geo_engine_get_zone_count(void);
+void                   ios_geo_engine_initialize(void);
+void                   ios_geo_engine_add_zone(const char* id, const char* name,
+                                                double latitude, double longitude,
+                                                double radiusMeters);
+void                   ios_geo_engine_remove_zone(const char* id);
+struct GeoEngineResult ios_geo_engine_process_location(double latitude, double longitude,
+                                                        double speedMps,
+                                                        double accuracyMeters,
+                                                        long long timestampMs);
+void                   ios_geo_engine_clear_zones(void);
+int                    ios_geo_engine_get_zone_count(void);
 
 /**
  * Append a route point to a local day file. Returns true only when the point

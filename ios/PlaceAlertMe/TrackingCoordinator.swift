@@ -43,19 +43,10 @@ internal class TrackingCoordinator: NSObject {
         isTrackingActive = false
     }
 
-    // MARK: - Legacy zone API (no IDs)
-    //
-    // Kept for backward compatibility. New code should use the
-    // `GeoZone`-based API below.
-
-    func addGeofenceZone(latitude: Double, longitude: Double, radiusMeters: Double) {
-        let legacyId = "legacy:\(latitude):\(longitude):\(radiusMeters)"
-        addZone(GeoZone(
-            id: legacyId,
-            latitude: latitude,
-            longitude: longitude,
-            radiusMeters: radiusMeters
-        ))
+    func addGeofenceZone(id: String, name: String, latitude: Double, longitude: Double, radiusMeters: Double) {
+        locationManager.addGeofenceZone(id: id, name: name,
+                                         latitude: latitude, longitude: longitude,
+                                         radiusMeters: radiusMeters)
     }
 
     func clearGeofenceZones() {
@@ -168,11 +159,11 @@ extension TrackingCoordinator: LocationManagerDelegate {
             name: NSNotification.Name("GeofenceStatusChanged"),
             object: nil,
             userInfo: [
-                "isInside": response.isInsideZone,
+                "isInside": response.isInsideAnyZone,
                 "latitude": location.coordinate.latitude,
                 "longitude": location.coordinate.longitude,
-                "distance": response.distanceMeters,
-                "nextInterval": response.nextIntervalMs,
+                "distance": response.distanceToNearestMeters,
+                "nextInterval": response.nextIntervalMs
             ]
         )
 
@@ -182,11 +173,21 @@ extension TrackingCoordinator: LocationManagerDelegate {
         }
     }
 
-    func locationManager(_ manager: LocationManager, didChangeZoneStatus isInside: Bool) {
+    func locationManager(_ manager: LocationManager, didTransition transition: ZoneTransition) {
+        let notificationName: NSNotification.Name
+        switch transition.type {
+        case .enter: notificationName = NSNotification.Name("ZoneEnter")
+        case .exit:  notificationName = NSNotification.Name("ZoneExit")
+        }
         NotificationCenter.default.post(
-            name: NSNotification.Name("GeofenceZoneStatusChanged"),
+            name: notificationName,
             object: nil,
-            userInfo: ["isInside": isInside]
+            userInfo: [
+                "zoneId": transition.zoneId,
+                "zoneName": transition.zoneName,
+                "distanceMeters": transition.distanceMeters,
+                "timestampMs": transition.timestampMs
+            ]
         )
     }
 }
@@ -195,10 +196,12 @@ extension TrackingCoordinator: LocationManagerDelegate {
 
 extension TrackingCoordinator: ActivityRecognitionDelegate {
     func activityRecognitionManager(_ manager: ActivityRecognitionManager, didDetectActivity activity: CMMotionActivity) {
-        if ActivityRecognitionManager.isActivityStill(activity) {
-            locationManager.pauseTracking()
-        } else if ActivityRecognitionManager.isActivityMoving(activity) {
-            locationManager.resumeTracking()
+        if activity.stationary {
+            locationManager.activityScaleFactor = 3.0
+        } else if activity.automotive {
+            locationManager.activityScaleFactor = 0.5
+        } else {
+            locationManager.activityScaleFactor = 1.0
         }
     }
 }

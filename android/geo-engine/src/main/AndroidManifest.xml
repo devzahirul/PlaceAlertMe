@@ -17,6 +17,9 @@
     <!-- Internet for Google Play Services -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Boot receiver for zone re-registration after device restart -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application>
         <!-- Location Tracking Service -->
         <service
@@ -24,6 +27,21 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!-- Native GeofencingClient background transition service -->
+        <service
+            android:name=".GeofenceTransitionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <!-- Re-register zones after device boot -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

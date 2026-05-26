@@ -1,116 +1,73 @@
 package com.placealertme.geofence
 
-/**
- * JNI bridge to C++ geo_engine
- * Handles direct communication with the native geofencing engine
- */
+import org.json.JSONObject
+import org.json.JSONArray
+
 object GeoEngineJNI {
     init {
         System.loadLibrary("geo_engine_jni")
     }
 
-    /**
-     * Initialize the geofencing engine
-     */
     external fun initializeEngine()
 
-    /**
-     * Add a geofence zone
-     * @param latitude Zone center latitude (-90 to 90)
-     * @param longitude Zone center longitude (-180 to 180)
-     * @param radiusMeters Zone radius in meters (> 0)
-     */
-    external fun addZone(latitude: Double, longitude: Double, radiusMeters: Double)
-
-    /**
-     * Add an ID-based geofence zone with trigger flags.
-     */
-    external fun addZoneWithId(
-        zoneId: String,
-        latitude: Double,
-        longitude: Double,
-        radiusMeters: Double,
-        notifyOnEntry: Boolean = true,
-        notifyOnExit: Boolean = true
+    external fun addZone(
+        id: String, name: String,
+        latitude: Double, longitude: Double, radiusMeters: Double
     )
 
-    /**
-     * Process a location update
-     * @param latitude Current latitude
-     * @param longitude Current longitude
-     * @param speedMps Speed in meters per second
-     * @return LongArray [isInsideZone (0/1), nextIntervalMs, distanceMeters]
-     */
-    external fun processLocation(latitude: Double, longitude: Double, speedMps: Double): LongArray
+    external fun removeZoneById(id: String)
 
-    /**
-     * Process a location update and return per-zone transition events.
-     */
-    private external fun processLocationDetailed(
-        latitude: Double,
-        longitude: Double,
-        speedMps: Double
-    ): EngineResponse
+    // Returns JSON string from C++
+    external fun processLocation(
+        latitude: Double, longitude: Double, speedMps: Double,
+        accuracyMeters: Double, timestampMs: Long
+    ): String
 
-    /**
-     * Update a zone state from a platform-native geofence event. Returns null
-     * when C++ dedup or trigger flags suppress the event.
-     */
-    external fun updateZoneState(zoneId: String, isInside: Boolean): ZoneTransition?
-
-    /**
-     * Return nearest zones to a coordinate, sorted by distance.
-     */
-    external fun nearestZones(latitude: Double, longitude: Double, maxCount: Int): List<NearestZone>
-
-    /**
-     * Shared movement threshold check.
-     */
-    external fun hasMovedSignificantly(
-        fromLatitude: Double,
-        fromLongitude: Double,
-        toLatitude: Double,
-        toLongitude: Double,
-        thresholdMeters: Double
-    ): Boolean
-
-    /**
-     * Clear all zones
-     */
     external fun clearZones()
-
-    /**
-     * Get count of managed zones
-     */
     external fun getZoneCount(): Int
-
-    /**
-     * Engine response data class
-     */
-    data class EngineResponse(
-        val isInsideZone: Boolean,
-        val nextIntervalMs: Long,
-        val distanceMeters: Double,
-        val transitions: List<ZoneTransition>
-    )
 
     data class ZoneTransition(
         val zoneId: String,
-        val isInside: Boolean,
+        val zoneName: String,
+        val type: String,        // "ENTER" or "EXIT"
         val distanceMeters: Double,
-        val zoneIndex: Int
+        val timestampMs: Long
     )
 
-    data class NearestZone(
-        val zoneId: String,
-        val zoneIndex: Int,
-        val distanceMeters: Double
+    data class EngineResponse(
+        val isInsideAnyZone: Boolean,
+        val nextIntervalMs: Long,
+        val distanceToNearestMeters: Double,
+        val transitions: List<ZoneTransition>
     )
 
-    /**
-     * Wrapper to convert JNI response to data class
-     */
-    fun processLocationWrapped(latitude: Double, longitude: Double, speedMps: Double): EngineResponse {
-        return processLocationDetailed(latitude, longitude, speedMps)
+    fun processLocationWrapped(
+        latitude: Double, longitude: Double, speedMps: Double,
+        accuracyMeters: Double, timestampMs: Long
+    ): EngineResponse {
+        val json = processLocation(latitude, longitude, speedMps, accuracyMeters, timestampMs)
+        return parseEngineResponse(json)
+    }
+
+    private fun parseEngineResponse(json: String): EngineResponse {
+        val obj = JSONObject(json)
+        val transitions = mutableListOf<ZoneTransition>()
+        val arr: JSONArray = obj.optJSONArray("transitions") ?: JSONArray()
+        for (i in 0 until arr.length()) {
+            val t = arr.getJSONObject(i)
+            transitions.add(ZoneTransition(
+                zoneId        = t.getString("zoneId"),
+                zoneName      = t.getString("zoneName"),
+                type          = t.getString("type"),
+                distanceMeters = t.getDouble("distanceMeters"),
+                timestampMs   = t.getLong("timestampMs")
+            ))
+        }
+        return EngineResponse(
+            isInsideAnyZone        = obj.getInt("isInsideAny") != 0,
+            nextIntervalMs         = obj.getLong("nextIntervalMs"),
+            distanceToNearestMeters = obj.getDouble("distanceMeters"),
+            transitions            = transitions
+        )
     }
 }

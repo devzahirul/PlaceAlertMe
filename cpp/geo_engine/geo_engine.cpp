@@ -12,28 +12,38 @@
 
 namespace geo_engine {
 
-const double EARTH_RADIUS_METERS = 6371000.0;  // Earth radius in meters
-const double DEG_TO_RAD = M_PI / 180.0;
+const double EARTH_RADIUS_METERS = 6371000.0;
+const double DEG_TO_RAD          = M_PI / 180.0;
 
 GeoEngine::GeoEngine() : hasLastLocation(false) {}
-
 GeoEngine::~GeoEngine() {}
 
 void GeoEngine::initialize(const std::vector<GeofenceZone>& zones) {
-    this->zones = zones;
-    insideStates.clear();
-    hasLastLocation = false;
+    clearZones();
+    for (const auto& z : zones) {
+        addZone(z);
+    }
 }
 
 void GeoEngine::addZone(const GeofenceZone& zone) {
-    zones.push_back(zone);
+    GeofenceZone z = zone;
+    if (z.radiusMeters < MIN_RADIUS_METERS) {
+        z.radiusMeters = MIN_RADIUS_METERS;
+    }
+    // Preserve existing state if zone already tracked (re-add after config change)
+    if (zoneStates.find(z.id) == zoneStates.end()) {
+        zoneStates[z.id] = ZoneStatus{};
+    }
+    // Remove old entry with same id before pushing
+    zones.erase(std::remove_if(zones.begin(), zones.end(),
+        [&](const GeofenceZone& existing){ return existing.id == z.id; }), zones.end());
+    zones.push_back(z);
 }
 
-void GeoEngine::removeZone(size_t index) {
-    if (index < zones.size()) {
-        zones.erase(zones.begin() + index);
-        insideStates.clear();
-    }
+void GeoEngine::removeZone(const std::string& zoneId) {
+    zones.erase(std::remove_if(zones.begin(), zones.end(),
+        [&](const GeofenceZone& z){ return z.id == zoneId; }), zones.end());
+    zoneStates.erase(zoneId);
 }
 
 size_t GeoEngine::getZoneCount() const {
@@ -42,10 +52,17 @@ size_t GeoEngine::getZoneCount() const {
 
 void GeoEngine::clearZones() {
     zones.clear();
-    insideStates.clear();
+    zoneStates.clear();
 }
 
-double GeoEngine::calculateDistance(double lat1, double lon1, double lat2, double lon2) const {
+ZoneState GeoEngine::getZoneState(const std::string& zoneId) const {
+    auto it = zoneStates.find(zoneId);
+    if (it == zoneStates.end()) return ZoneState::OUTSIDE;
+    return it->second.state;
+}
+
+double GeoEngine::calculateDistance(double lat1, double lon1,
+                                    double lat2, double lon2) const {
     double dLat = (lat2 - lat1) * DEG_TO_RAD;
     double dLon = (lon2 - lon1) * DEG_TO_RAD;
 
@@ -57,102 +74,142 @@ double GeoEngine::calculateDistance(double lat1, double lon1, double lat2, doubl
     return EARTH_RADIUS_METERS * c;
 }
 
-std::pair<bool, double> GeoEngine::checkZoneContainment(const UserLocation& location) const {
-    if (zones.empty()) {
-        return {false, std::numeric_limits<double>::max()};
-    }
-
-    double nearestDistance = std::numeric_limits<double>::max();
-    bool isInsideAny = false;
-
-    for (const auto& zone : zones) {
-        double distance = calculateDistance(location.latitude, location.longitude,
-                                           zone.latitude, zone.longitude);
-
-        if (distance <= zone.radiusMeters) {
-            isInsideAny = true;
-        }
-
-        nearestDistance = std::min(nearestDistance, distance);
-    }
-
-    return {isInsideAny, nearestDistance};
-}
-
-int64_t GeoEngine::calculateAdaptiveInterval(double speedMps, double distanceToNearestZone,
-                                            double radiusOfNearestZone) const {
-    int64_t baseInterval = 60000;  // 60 seconds default
-
-    // Adjust based on speed
+int64_t GeoEngine::calculateAdaptiveInterval(double speedMps,
+                                              double distanceToBoundary) const {
+    // Speed-based base interval
+    int64_t base;
     if (speedMps < 1.0) {
-        baseInterval = 60000;  // 60 seconds when stationary
+        base = 60000;
     } else if (speedMps < 5.0) {
-        baseInterval = 10000;  // 10 seconds when walking
+        base = 10000;
     } else if (speedMps < 15.0) {
-        baseInterval = 5000;   // 5 seconds when running/cycling
+        base = 5000;
     } else {
-        baseInterval = 2000;   // 2 seconds when moving fast
+        base = 2000;
     }
 
-    // Adjust based on distance to zone
-    if (distanceToNearestZone > radiusOfNearestZone * 2.0) {
-        baseInterval *= 2;  // Double interval when far from zone
-    } else if (distanceToNearestZone < radiusOfNearestZone * 0.5) {
-        baseInterval = std::min(baseInterval, static_cast<int64_t>(5000));
+    // Proximity adjustment (distanceToBoundary = dist-to-center minus radius)
+    // Negative value means already inside — speed alone governs.
+    if (distanceToBoundary < 0.0) {
+        // Inside zone: speed only
+    } else if (distanceToBoundary < MIN_RADIUS_METERS) {
+        // Approaching boundary: poll faster
+        base = std::min(base, static_cast<int64_t>(5000));
+    } else if (distanceToBoundary > MIN_RADIUS_METERS * 2.0) {
+        // Far from all zones: poll slower
+        base = base * 2;
     }
 
-    // Clamp to min/max bounds
-    baseInterval = std::max(static_cast<int64_t>(1000),   baseInterval);
-    baseInterval = std::min(static_cast<int64_t>(120000), baseInterval);
-
-    return baseInterval;
+    return std::max(static_cast<int64_t>(1000),
+           std::min(static_cast<int64_t>(120000), base));
 }
 
 EngineResponse GeoEngine::processLocation(const UserLocation& location) {
     EngineResponse response;
 
     if (zones.empty()) {
-        response.isInsideZone = false;
-        response.nextIntervalMs = 60000;
-        response.distanceMeters = 0.0;
+        response.isInsideAnyZone    = false;
+        response.nextIntervalMs     = 60000;
+        response.distanceToNearestMeters = 0.0;
         return response;
     }
 
-    double distanceToNearest = std::numeric_limits<double>::max();
-    double nearestZoneRadius = 100.0;  // Default radius
-    bool isInsideAny = false;
+    // Reject fixes that are too inaccurate to make reliable transition decisions
+    if (location.accuracyMeters > MAX_ACCURACY_METERS) {
+        response.nextIntervalMs = ACCURACY_WAIT_INTERVAL_MS;
+        return response;
+    }
 
-    for (size_t i = 0; i < zones.size(); ++i) {
-        const auto& zone = zones[i];
-        const double distance = calculateDistance(location.latitude, location.longitude,
-                                                  zone.latitude, zone.longitude);
-        const bool isInside = distance <= zone.radiusMeters;
-        isInsideAny = isInsideAny || isInside;
+    double minDistanceToBoundary = std::numeric_limits<double>::max();
+    double nearestCenterDistance  = std::numeric_limits<double>::max();
+    bool   insideAny              = false;
 
-        if (distance < distanceToNearest) {
-            distanceToNearest = distance;
-            nearestZoneRadius = zone.radiusMeters;
+    for (const auto& zone : zones) {
+        double distance = calculateDistance(location.latitude, location.longitude,
+                                            zone.latitude, zone.longitude);
+        double distToBoundary = distance - zone.radiusMeters;  // negative = inside
+        double exitThreshold  = zone.radiusMeters + zone.exitBufferMeters;
+
+        if (distance < nearestCenterDistance) {
+            nearestCenterDistance = distance;
+        }
+        if (distToBoundary < minDistanceToBoundary) {
+            minDistanceToBoundary = distToBoundary;
         }
 
-        const std::string key = keyForZone(i);
-        const bool wasInside = insideStates.count(key) > 0 ? insideStates[key] : false;
-        if (wasInside != isInside) {
-            insideStates[key] = isInside;
-            if (shouldNotify(zone, isInside)) {
-                response.transitions.emplace_back(zone.id, isInside, distance, static_cast<int>(i));
-            }
+        ZoneStatus& status = zoneStates[zone.id];
+
+        switch (status.state) {
+            case ZoneState::OUTSIDE:
+                if (distance < zone.radiusMeters) {
+                    status.state               = ZoneState::PENDING_ENTER;
+                    status.pendingStateStartMs = location.timestampMs;
+                }
+                break;
+
+            case ZoneState::PENDING_ENTER:
+                if (distance >= zone.radiusMeters) {
+                    // Moved back out before dwell — cancel
+                    status.state               = ZoneState::OUTSIDE;
+                    status.pendingStateStartMs = 0;
+                } else if (location.timestampMs - status.pendingStateStartMs >= DWELL_ENTRY_MS) {
+                    // Dwell satisfied — confirm ENTER
+                    status.state               = ZoneState::INSIDE;
+                    status.pendingStateStartMs = 0;
+                    response.transitions.push_back({
+                        zone.id, zone.name, TransitionType::ENTER,
+                        distance, location.timestampMs
+                    });
+                }
+                break;
+
+            case ZoneState::INSIDE:
+                insideAny = true;
+                if (distance >= exitThreshold) {
+                    status.state               = ZoneState::PENDING_EXIT;
+                    status.pendingStateStartMs = location.timestampMs;
+                }
+                break;
+
+            case ZoneState::PENDING_EXIT:
+                insideAny = true;  // Still counts as inside until confirmed exit
+                if (distance < zone.radiusMeters) {
+                    // Re-entered before dwell — cancel exit
+                    status.state               = ZoneState::INSIDE;
+                    status.pendingStateStartMs = 0;
+                } else if (location.timestampMs - status.pendingStateStartMs >= DWELL_EXIT_MS) {
+                    // Dwell satisfied — confirm EXIT
+                    status.state               = ZoneState::OUTSIDE;
+                    status.pendingStateStartMs = 0;
+                    response.transitions.push_back({
+                        zone.id, zone.name, TransitionType::EXIT,
+                        distance, location.timestampMs
+                    });
+                    insideAny = insideAny && false;  // re-check below
+                }
+                break;
         }
     }
 
-    // Calculate adaptive interval
-    int64_t nextInterval = calculateAdaptiveInterval(location.speedMps, distanceToNearest, nearestZoneRadius);
+    // Recompute isInsideAny cleanly after all state updates
+    insideAny = false;
+    for (const auto& zone : zones) {
+        auto it = zoneStates.find(zone.id);
+        if (it != zoneStates.end() &&
+            (it->second.state == ZoneState::INSIDE ||
+             it->second.state == ZoneState::PENDING_EXIT)) {
+            insideAny = true;
+            break;
+        }
+    }
 
-    response.isInsideZone = isInsideAny;
-    response.nextIntervalMs = nextInterval;
-    response.distanceMeters = distanceToNearest;
+    response.isInsideAnyZone         = insideAny;
+    response.distanceToNearestMeters = nearestCenterDistance;
+    response.nextIntervalMs          = calculateAdaptiveInterval(
+        location.speedMps, minDistanceToBoundary);
 
-    lastLocation = location;
-    hasLastLocation = true;
+    lastLocation     = location;
+    hasLastLocation  = true;
 
     return response;
 }
