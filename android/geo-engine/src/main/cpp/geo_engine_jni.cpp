@@ -22,6 +22,9 @@ static std::string responseToJson(const geo_engine::EngineResponse& r) {
            << ",\"zoneName\":\"" << t.zoneName << "\""
            << ",\"type\":\"" << (t.type == geo_engine::TransitionType::ENTER ? "ENTER" : "EXIT") << "\""
            << ",\"distanceMeters\":" << t.distanceMeters
+           << ",\"latitude\":" << t.latitude
+           << ",\"longitude\":" << t.longitude
+           << ",\"speedMps\":" << t.speedMps
            << ",\"timestampMs\":" << t.timestampMs
            << "}";
     }

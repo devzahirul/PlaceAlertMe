@@ -158,7 +158,8 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
                     status.pendingStateStartMs = 0;
                     response.transitions.push_back({
                         zone.id, zone.name, TransitionType::ENTER,
-                        distance, location.timestampMs
+                        distance, location.latitude, location.longitude, location.speedMps,
+                        location.timestampMs
                     });
                 }
                 break;
@@ -183,7 +184,8 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
                     status.pendingStateStartMs = 0;
                     response.transitions.push_back({
                         zone.id, zone.name, TransitionType::EXIT,
-                        distance, location.timestampMs
+                        distance, location.latitude, location.longitude, location.speedMps,
+                        location.timestampMs
                     });
                     insideAny = insideAny && false;  // re-check below
                 }

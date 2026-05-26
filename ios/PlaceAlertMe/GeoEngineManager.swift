@@ -14,6 +14,9 @@ public struct ZoneTransition {
     public let zoneName: String
     public let type: TransitionType
     public let distanceMeters: Double
+    public let latitude: Double
+    public let longitude: Double
+    public let speedMps: Double
     public let timestampMs: Int64
 }
 
@@ -117,6 +120,9 @@ internal class GeoEngineManager {
                     zoneName:       zoneName,
                     type:           t.type == 0 ? .enter : .exit,
                     distanceMeters: t.distanceMeters,
+                    latitude:       t.latitude,
+                    longitude:      t.longitude,
+                    speedMps:       t.speedMps,
                     timestampMs:    Int64(t.timestampMs)
                 ))
             }

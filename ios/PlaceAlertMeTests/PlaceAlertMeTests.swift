@@ -132,6 +132,8 @@ class PlaceAlertMeTests: XCTestCase {
         XCTAssertTrue(r2.isInsideAnyZone, "Should be inside after 10s dwell")
         XCTAssertEqual(r2.transitions.count, 1, "One ENTER transition expected")
         XCTAssertEqual(r2.transitions.first?.type, .enter)
+        XCTAssertEqual(r2.transitions.first?.latitude ?? -1, 37.7749, accuracy: 0.001)
+        XCTAssertEqual(r2.transitions.first?.longitude ?? -1, -122.4194, accuracy: 0.001)
     }
 
     func testHysteresisExitBuffer() {
@@ -430,6 +432,33 @@ class PlaceAlertMeTests: XCTestCase {
                                             speedMps: 2.5, accuracyMeters: 10.0, timestampMs: Int64(i * 100))
             }
         }
+    }
+
+    func testPlaceVisitHistory() {
+        PlaceVisitStore.shared.clearHistory()
+        let manager = GeoEngineManager.shared
+        manager.clearZones()
+        manager.addZone(id: "home", name: "Home", latitude: 37.7749, longitude: -122.4194, radiusMeters: 200.0)
+
+        _ = manager.processLocation(latitude: 37.7749, longitude: -122.4194,
+                                     speedMps: 0.0, accuracyMeters: 10.0, timestampMs: 0)
+        let r = manager.processLocation(latitude: 37.7749, longitude: -122.4194,
+                                         speedMps: 0.0, accuracyMeters: 10.0, timestampMs: 11000)
+
+        if let t = r.transitions.first, t.type == .enter {
+            PlaceVisitStore.shared.recordEntry(transition: t)
+        }
+
+        let active = PlaceVisitStore.shared.getActiveVisits()
+        XCTAssertEqual(active.count, 1)
+        XCTAssertEqual(active.first?.zoneId, "home")
+        XCTAssertTrue(active.first?.isActive ?? false)
+
+        PlaceVisitStore.shared.recordExit(zoneId: "home", timestampMs: 60000)
+        let history = PlaceVisitStore.shared.getVisitHistory(zoneId: "home")
+        XCTAssertFalse(history.first?.isActive ?? true)
+        XCTAssertEqual(history.first?.durationMs, 49000)
+        PlaceVisitStore.shared.clearHistory()
     }
 }
 

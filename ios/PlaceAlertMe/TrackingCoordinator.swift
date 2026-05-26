@@ -56,6 +56,20 @@ internal class TrackingCoordinator: NSObject {
         clearAllZones()
     }
 
+    func updateGeofenceZone(id: String, name: String?, radiusMeters: Double?) {
+        guard let record = PlaceStore.shared.load().first(where: { $0.id == id }) else { return }
+        let newName   = name         ?? record.name
+        let newRadius = radiusMeters ?? record.radiusMeters
+        let updated   = PlaceRecord(id: id, name: newName,
+                                    latitude: record.latitude, longitude: record.longitude,
+                                    radiusMeters: newRadius)
+        PlaceStore.shared.add(updated)
+        GeoEngineManager.shared.removeZone(id: id)
+        GeoEngineManager.shared.addZone(id: id, name: newName,
+                                         latitude: record.latitude, longitude: record.longitude,
+                                         radiusMeters: newRadius)
+    }
+
     // MARK: - Zone management (new ID-based API)
 
     func addZone(_ zone: GeoZone) {

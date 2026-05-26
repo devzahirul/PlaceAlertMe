@@ -95,6 +95,8 @@ TEST_F(GeoEngineTest, EnterFiredAfterDwell) {
     EXPECT_EQ(r.transitions.size(), (size_t)1);
     EXPECT_EQ(r.transitions[0].type, TransitionType::ENTER);
     EXPECT_EQ(r.transitions[0].zoneId, "sf");
+    EXPECT_NEAR(r.transitions[0].latitude, 37.7749, 0.001);
+    EXPECT_NEAR(r.transitions[0].longitude, -122.4194, 0.001);
     EXPECT_EQ(engine.getZoneState("sf"), ZoneState::INSIDE);
 }
 
@@ -119,6 +121,8 @@ TEST_F(GeoEngineTest, ExitFiredAfterDwell) {
                                       DWELL_ENTRY_MS + 1000 + DWELL_EXIT_MS});
     EXPECT_EQ(r.transitions.size(), (size_t)1);
     EXPECT_EQ(r.transitions[0].type, TransitionType::EXIT);
+    EXPECT_NEAR(r.transitions[0].latitude, 37.7849, 0.001);
+    EXPECT_NEAR(r.transitions[0].longitude, -122.4194, 0.001);
     EXPECT_EQ(engine.getZoneState("sf"), ZoneState::OUTSIDE);
 }
 

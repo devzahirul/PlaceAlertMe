@@ -60,6 +60,9 @@ struct ZoneTransition {
     std::string    zoneName;
     TransitionType type;
     double         distanceMeters;
+    double         latitude;
+    double         longitude;
+    double         speedMps;
     int64_t        timestampMs;
 };
 

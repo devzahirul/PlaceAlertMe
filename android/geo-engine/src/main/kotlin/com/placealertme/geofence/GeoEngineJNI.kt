@@ -31,6 +31,9 @@ object GeoEngineJNI {
         val zoneName: String,
         val type: String,        // "ENTER" or "EXIT"
         val distanceMeters: Double,
+        val latitude: Double,
+        val longitude: Double,
+        val speedMps: Double,
         val timestampMs: Long
     )
 
@@ -60,6 +63,9 @@ object GeoEngineJNI {
                 zoneName      = t.getString("zoneName"),
                 type          = t.getString("type"),
                 distanceMeters = t.getDouble("distanceMeters"),
+                latitude      = t.getDouble("latitude"),
+                longitude     = t.getDouble("longitude"),
+                speedMps      = t.getDouble("speedMps"),
                 timestampMs   = t.getLong("timestampMs")
             ))
         }

@@ -80,6 +80,9 @@ struct GeoEngineResult ios_geo_engine_process_location(double latitude, double l
         result.transitions[i].zoneName[127] = '\0';
         result.transitions[i].type          = (t.type == TransitionType::ENTER) ? 0 : 1;
         result.transitions[i].distanceMeters = t.distanceMeters;
+        result.transitions[i].latitude      = t.latitude;
+        result.transitions[i].longitude     = t.longitude;
+        result.transitions[i].speedMps      = t.speedMps;
         result.transitions[i].timestampMs   = (long long)t.timestampMs;
     }
 

@@ -15,6 +15,9 @@ struct GeoEngineTransition {
     char      zoneName[128];
     int       type;           // 0 = ENTER, 1 = EXIT
     double    distanceMeters;
+    double    latitude;
+    double    longitude;
+    double    speedMps;
     long long timestampMs;
 };
 

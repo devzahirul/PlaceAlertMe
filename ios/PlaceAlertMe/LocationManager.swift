@@ -53,6 +53,7 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
             registerCLRegion(id: record.id, latitude: record.latitude,
                              longitude: record.longitude, radiusMeters: record.radiusMeters)
         }
+        PlaceNotificationManager.shared.requestAuthorization()
         clLocationManager.startUpdatingLocation()
     }
 
@@ -121,6 +122,14 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
         updateTrackingInterval(response.nextIntervalMs)
 
         for transition in response.transitions {
+            switch transition.type {
+            case .enter:
+                PlaceVisitStore.shared.recordEntry(transition: transition)
+                PlaceNotificationManager.shared.notifyEnter(zoneId: transition.zoneId, zoneName: transition.zoneName)
+            case .exit:
+                PlaceVisitStore.shared.recordExit(zoneId: transition.zoneId, timestampMs: transition.timestampMs)
+                PlaceNotificationManager.shared.notifyExit(zoneId: transition.zoneId, zoneName: transition.zoneName)
+            }
             delegate?.locationManager(self, didTransition: transition)
         }
 

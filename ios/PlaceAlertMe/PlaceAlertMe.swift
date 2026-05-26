@@ -43,6 +43,26 @@ public class PlaceAlertMe {
         coordinator.clearGeofenceZones()
     }
 
+    public func getCurrentPlaces() -> [PlaceVisit] {
+        PlaceVisitStore.shared.getActiveVisits()
+    }
+
+    public func getVisitHistory(zoneId: String, limit: Int = 50) -> [PlaceVisit] {
+        PlaceVisitStore.shared.getVisitHistory(zoneId: zoneId, limit: limit)
+    }
+
+    public func getAllVisitHistory(limit: Int = 100) -> [PlaceVisit] {
+        PlaceVisitStore.shared.getAllVisitHistory(limit: limit)
+    }
+
+    public func updateGeofenceZone(
+        id: String,
+        name: String? = nil,
+        radiusMeters: Double? = nil
+    ) {
+        coordinator.updateGeofenceZone(id: id, name: name, radiusMeters: radiusMeters)
+    }
+
     // MARK: - Internal: notification → delegate bridge
 
     private func setupNotificationListeners() {
