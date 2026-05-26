@@ -1,5 +1,7 @@
 import XCTest
 @testable import PlaceAlertMe
+
+#if os(iOS)
 import CoreLocation
 
 class PlaceAlertMeTests: XCTestCase {
@@ -397,11 +399,13 @@ class PlaceAlertMeTests: XCTestCase {
 
     // MARK: - ActivityRecognitionManager Tests
 
+    #if os(iOS)
     func testActivityRecognitionManagerInitialization() {
         let activityManager = ActivityRecognitionManager()
 
         XCTAssertNotNil(activityManager, "Activity manager should initialize")
     }
+    #endif
 
     // MARK: - TrackingCoordinator Tests
 
@@ -447,3 +451,4 @@ class MockLocationManagerDelegate: LocationManagerDelegate {
         // Mock implementation
     }
 }
+#endif

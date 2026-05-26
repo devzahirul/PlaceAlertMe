@@ -1,4 +1,6 @@
 import Foundation
+
+#if os(iOS)
 import CoreLocation
 import GeoEngineWrapper
 
@@ -39,6 +41,19 @@ internal class GeoEngineManager {
 
     func removeZone(id: String) {
         ios_geo_engine_remove_zone(id)
+    }
+
+    func addZone(_ zone: GeoZone) {
+        zone.id.withCString { zoneId in
+            ios_geo_engine_add_zone_with_id(
+                zoneId,
+                zone.latitude,
+                zone.longitude,
+                zone.radiusMeters,
+                zone.notifyOnEntry,
+                zone.notifyOnExit
+            )
+        }
     }
 
     func clearZones() {

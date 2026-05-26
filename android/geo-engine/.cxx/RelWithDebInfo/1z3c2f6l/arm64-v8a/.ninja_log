@@ -1,0 +1,5 @@
+# ninja log v5
+1	207	1779329449559039612	CMakeFiles/geo_engine_jni.dir/src/main/cpp/geo_engine_jni.cpp.o	b29a08a011d8e38c
+0	253	1779329449606941907	CMakeFiles/geo_engine_core.dir/Users/lynkto_1/PlaceAlertMe/cpp/geo_engine/geo_engine.cpp.o	27282e2dfd818344
+253	313	1779329449668054000	libgeo_engine_core.a	272dc245b0426272
+313	383	1779329449723174064	../../../../build/intermediates/cxx/RelWithDebInfo/1z3c2f6l/obj/arm64-v8a/libgeo_engine_jni.so	d40df73e6be1a4e8

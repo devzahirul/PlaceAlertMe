@@ -1,0 +1,610 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0B8833A82FBEA1A500D431FD /* PlaceAlertMe in Frameworks */ = {isa = PBXBuildFile; productRef = 0B8833A72FBEA1A500D431FD /* PlaceAlertMe */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0B88338A2FBEA0FC00D431FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0B8833742FBEA0FA00D431FD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0B88337B2FBEA0FA00D431FD;
+			remoteInfo = PlaceAlertCo;
+		};
+		0B8833942FBEA0FC00D431FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0B8833742FBEA0FA00D431FD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0B88337B2FBEA0FA00D431FD;
+			remoteInfo = PlaceAlertCo;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0B88337C2FBEA0FA00D431FD /* PlaceAlertCo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PlaceAlertCo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0B8833892FBEA0FC00D431FD /* PlaceAlertCoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlaceAlertCoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0B8833932FBEA0FC00D431FD /* PlaceAlertCoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlaceAlertCoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0B8833FF2FBEA2A000D431FD /* PlaceAlertCo.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = PlaceAlertCo.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		0B88337E2FBEA0FA00D431FD /* PlaceAlertCo */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PlaceAlertCo;
+			sourceTree = "<group>";
+		};
+		0B88338C2FBEA0FC00D431FD /* PlaceAlertCoTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PlaceAlertCoTests;
+			sourceTree = "<group>";
+		};
+		0B8833962FBEA0FC00D431FD /* PlaceAlertCoUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PlaceAlertCoUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0B8833792FBEA0FA00D431FD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0B8833A82FBEA1A500D431FD /* PlaceAlertMe in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0B8833862FBEA0FC00D431FD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0B8833902FBEA0FC00D431FD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0B8833732FBEA0FA00D431FD = {
+			isa = PBXGroup;
+			children = (
+				0B88337E2FBEA0FA00D431FD /* PlaceAlertCo */,
+				0B88338C2FBEA0FC00D431FD /* PlaceAlertCoTests */,
+				0B8833962FBEA0FC00D431FD /* PlaceAlertCoUITests */,
+				0B88337D2FBEA0FA00D431FD /* Products */,
+				0B88341A2FBEAC3700D431FD /* Recovered References */,
+			);
+			sourceTree = "<group>";
+		};
+		0B88337D2FBEA0FA00D431FD /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0B88337C2FBEA0FA00D431FD /* PlaceAlertCo.app */,
+				0B8833892FBEA0FC00D431FD /* PlaceAlertCoTests.xctest */,
+				0B8833932FBEA0FC00D431FD /* PlaceAlertCoUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0B88341A2FBEAC3700D431FD /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				0B8833FF2FBEA2A000D431FD /* PlaceAlertCo.xcconfig */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0B88337B2FBEA0FA00D431FD /* PlaceAlertCo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B88339D2FBEA0FC00D431FD /* Build configuration list for PBXNativeTarget "PlaceAlertCo" */;
+			buildPhases = (
+				0B8833782FBEA0FA00D431FD /* Sources */,
+				0B8833792FBEA0FA00D431FD /* Frameworks */,
+				0B88337A2FBEA0FA00D431FD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				0B88337E2FBEA0FA00D431FD /* PlaceAlertCo */,
+			);
+			name = PlaceAlertCo;
+			packageProductDependencies = (
+				0B8833A72FBEA1A500D431FD /* PlaceAlertMe */,
+			);
+			productName = PlaceAlertCo;
+			productReference = 0B88337C2FBEA0FA00D431FD /* PlaceAlertCo.app */;
+			productType = "com.apple.product-type.application";
+		};
+		0B8833882FBEA0FC00D431FD /* PlaceAlertCoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B8833A02FBEA0FC00D431FD /* Build configuration list for PBXNativeTarget "PlaceAlertCoTests" */;
+			buildPhases = (
+				0B8833852FBEA0FC00D431FD /* Sources */,
+				0B8833862FBEA0FC00D431FD /* Frameworks */,
+				0B8833872FBEA0FC00D431FD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0B88338B2FBEA0FC00D431FD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0B88338C2FBEA0FC00D431FD /* PlaceAlertCoTests */,
+			);
+			name = PlaceAlertCoTests;
+			packageProductDependencies = (
+			);
+			productName = PlaceAlertCoTests;
+			productReference = 0B8833892FBEA0FC00D431FD /* PlaceAlertCoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		0B8833922FBEA0FC00D431FD /* PlaceAlertCoUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B8833A32FBEA0FC00D431FD /* Build configuration list for PBXNativeTarget "PlaceAlertCoUITests" */;
+			buildPhases = (
+				0B88338F2FBEA0FC00D431FD /* Sources */,
+				0B8833902FBEA0FC00D431FD /* Frameworks */,
+				0B8833912FBEA0FC00D431FD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0B8833952FBEA0FC00D431FD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0B8833962FBEA0FC00D431FD /* PlaceAlertCoUITests */,
+			);
+			name = PlaceAlertCoUITests;
+			packageProductDependencies = (
+			);
+			productName = PlaceAlertCoUITests;
+			productReference = 0B8833932FBEA0FC00D431FD /* PlaceAlertCoUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0B8833742FBEA0FA00D431FD /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					0B88337B2FBEA0FA00D431FD = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					0B8833882FBEA0FC00D431FD = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 0B88337B2FBEA0FA00D431FD;
+					};
+					0B8833922FBEA0FC00D431FD = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 0B88337B2FBEA0FA00D431FD;
+					};
+				};
+			};
+			buildConfigurationList = 0B8833772FBEA0FA00D431FD /* Build configuration list for PBXProject "PlaceAlertCo" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 0B8833732FBEA0FA00D431FD;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				0B8833A62FBEA1A500D431FD /* XCLocalSwiftPackageReference "../../PlaceAlertMe" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0B88337D2FBEA0FA00D431FD /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0B88337B2FBEA0FA00D431FD /* PlaceAlertCo */,
+				0B8833882FBEA0FC00D431FD /* PlaceAlertCoTests */,
+				0B8833922FBEA0FC00D431FD /* PlaceAlertCoUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0B88337A2FBEA0FA00D431FD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0B8833872FBEA0FC00D431FD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0B8833912FBEA0FC00D431FD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0B8833782FBEA0FA00D431FD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0B8833852FBEA0FC00D431FD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0B88338F2FBEA0FC00D431FD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0B88338B2FBEA0FC00D431FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0B88337B2FBEA0FA00D431FD /* PlaceAlertCo */;
+			targetProxy = 0B88338A2FBEA0FC00D431FD /* PBXContainerItemProxy */;
+		};
+		0B8833952FBEA0FC00D431FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0B88337B2FBEA0FA00D431FD /* PlaceAlertCo */;
+			targetProxy = 0B8833942FBEA0FC00D431FD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0B88339B2FBEA0FC00D431FD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = G8GZDW98G8;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		0B88339C2FBEA0FC00D431FD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = G8GZDW98G8;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		0B88339E2FBEA0FC00D431FD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0B8833FF2FBEA2A000D431FD /* PlaceAlertCo.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G8GZDW98G8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "PlaceAlertCo-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ugr.PlaceAlertCo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		0B88339F2FBEA0FC00D431FD /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0B8833FF2FBEA2A000D431FD /* PlaceAlertCo.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G8GZDW98G8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "PlaceAlertCo-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ugr.PlaceAlertCo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		0B8833A12FBEA0FC00D431FD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G8GZDW98G8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ugr.PlaceAlertCoTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PlaceAlertCo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PlaceAlertCo";
+			};
+			name = Debug;
+		};
+		0B8833A22FBEA0FC00D431FD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G8GZDW98G8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ugr.PlaceAlertCoTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PlaceAlertCo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PlaceAlertCo";
+			};
+			name = Release;
+		};
+		0B8833A42FBEA0FC00D431FD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G8GZDW98G8;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ugr.PlaceAlertCoUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = PlaceAlertCo;
+			};
+			name = Debug;
+		};
+		0B8833A52FBEA0FC00D431FD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G8GZDW98G8;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ugr.PlaceAlertCoUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = PlaceAlertCo;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0B8833772FBEA0FA00D431FD /* Build configuration list for PBXProject "PlaceAlertCo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0B88339B2FBEA0FC00D431FD /* Debug */,
+				0B88339C2FBEA0FC00D431FD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0B88339D2FBEA0FC00D431FD /* Build configuration list for PBXNativeTarget "PlaceAlertCo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0B88339E2FBEA0FC00D431FD /* Debug */,
+				0B88339F2FBEA0FC00D431FD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0B8833A02FBEA0FC00D431FD /* Build configuration list for PBXNativeTarget "PlaceAlertCoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0B8833A12FBEA0FC00D431FD /* Debug */,
+				0B8833A22FBEA0FC00D431FD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0B8833A32FBEA0FC00D431FD /* Build configuration list for PBXNativeTarget "PlaceAlertCoUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0B8833A42FBEA0FC00D431FD /* Debug */,
+				0B8833A52FBEA0FC00D431FD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		0B8833A62FBEA1A500D431FD /* XCLocalSwiftPackageReference "../../PlaceAlertMe" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../PlaceAlertMe;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0B8833A72FBEA1A500D431FD /* PlaceAlertMe */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PlaceAlertMe;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0B8833742FBEA0FA00D431FD /* Project object */;
+}

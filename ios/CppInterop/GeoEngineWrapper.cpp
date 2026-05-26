@@ -1,11 +1,34 @@
 #include "GeoEngineWrapper.h"
 #include "geo_engine.h"
+#include "history_engine.h"
+#include <algorithm>
 #include <memory>
 #include <cstring>
 
 using namespace geo_engine;
 
 static std::unique_ptr<GeoEngine> g_ios_engine = nullptr;
+static NavigationHistoryEngine g_ios_history_engine;
+static thread_local std::vector<std::string> g_ios_transition_ids;
+static thread_local std::vector<std::string> g_ios_nearest_ids;
+static thread_local std::string g_ios_single_transition_id;
+static thread_local std::vector<std::string> g_ios_history_day_keys;
+static thread_local std::string g_ios_history_json;
+
+static GeoEngineResult make_result(const EngineResponse& response, int transitionCount) {
+    GeoEngineResult result;
+    result.isInsideZone = response.isInsideZone;
+    result.nextIntervalMs = response.nextIntervalMs;
+    result.distanceMeters = response.distanceMeters;
+    result.transitionCount = transitionCount;
+    return result;
+}
+
+static void copy_transition(const ZoneTransition& source, GeoEngineTransition& target) {
+    target.isInside = source.isInside;
+    target.zoneIndex = source.zoneIndex;
+    target.distanceMeters = source.distanceMeters;
+}
 
 extern "C" {
 

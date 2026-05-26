@@ -1,0 +1,7 @@
+// Location Privacy Keys
+INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = We need your location to set up geofence reminders
+INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = We need your location to monitor geofences in the background
+INFOPLIST_KEY_NSLocationAlwaysUsageDescription = We need your location to monitor geofences in the background
+
+// Background Modes
+INFOPLIST_KEY_UIBackgroundModes = location

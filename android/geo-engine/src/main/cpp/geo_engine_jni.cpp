@@ -1,5 +1,6 @@
 #include <jni.h>
 #include "geo_engine.h"
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <sstream>

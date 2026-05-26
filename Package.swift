@@ -25,10 +25,9 @@ let package = Package(
             exclude: [
                 "geo_engine.h",
                 "CMakeLists.txt",
-                "tests",
-                "build"
+                "tests"
             ],
-            sources: ["geo_engine.cpp"],
+            sources: ["geo_engine.cpp", "history_engine.cpp"],
             publicHeadersPath: "include",
             cxxSettings: [
                 .define("_USE_MATH_DEFINES")
@@ -45,6 +44,9 @@ let package = Package(
             publicHeadersPath: ".",
             cxxSettings: [
                 .define("_USE_MATH_DEFINES")
+            ],
+            linkerSettings: [
+                .linkedLibrary("c++")
             ]
         ),
         // Swift API. Sample UIKit demo file is excluded so the library

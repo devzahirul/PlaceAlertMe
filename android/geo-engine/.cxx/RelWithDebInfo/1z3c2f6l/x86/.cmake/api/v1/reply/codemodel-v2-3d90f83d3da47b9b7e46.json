@@ -1,0 +1,69 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"jsonFile" : "directory-.-RelWithDebInfo-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.6.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"name" : "RelWithDebInfo",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "geo_engine_android",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "geo_engine_core::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geo_engine_core-RelWithDebInfo-2a05162f6f40d49cfe5b.json",
+					"name" : "geo_engine_core",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geo_engine_jni::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geo_engine_jni-RelWithDebInfo-0156841ac233b04480f8.json",
+					"name" : "geo_engine_jni",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/Users/lynkto_1/PlaceAlertMe/android/geo-engine/.cxx/RelWithDebInfo/1z3c2f6l/x86",
+		"source" : "/Users/lynkto_1/PlaceAlertMe/android/geo-engine"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

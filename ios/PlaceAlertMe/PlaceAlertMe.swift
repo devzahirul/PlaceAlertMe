@@ -1,6 +1,4 @@
 import Foundation
-import CoreLocation
-import CoreMotion
 
 public class PlaceAlertMe {
     public static let shared = PlaceAlertMe()
@@ -12,7 +10,7 @@ public class PlaceAlertMe {
         setupNotificationListeners()
     }
 
-    // MARK: - Public API
+    // MARK: - Live tracking
 
     public func startTracking() {
         coordinator.startTracking()
@@ -45,7 +43,7 @@ public class PlaceAlertMe {
         coordinator.clearGeofenceZones()
     }
 
-    // MARK: - Private Methods
+    // MARK: - Internal: notification → delegate bridge
 
     private func setupNotificationListeners() {
         NotificationCenter.default.addObserver(
@@ -99,14 +97,46 @@ public class PlaceAlertMe {
             let longitude = userInfo["longitude"] as? Double ?? 0.0
 
             let status = GeofenceStatus(
-                isInside: isInside,
-                latitude: latitude,
-                longitude: longitude,
-                distance: distance,
-                nextIntervalMs: nextInterval
+                isInside: userInfo["isInside"] as? Bool ?? false,
+                latitude: userInfo["latitude"] as? Double ?? 0,
+                longitude: userInfo["longitude"] as? Double ?? 0,
+                distance: userInfo["distance"] as? Double ?? 0,
+                nextIntervalMs: userInfo["nextInterval"] as? Int64 ?? 10000
             )
             self.delegate?.placeAlertMe(self, didUpdateGeofenceStatus: status)
         }
+    }
+
+    @objc private func onDidEnterZone(_ notification: NSNotification) {
+        guard let zone = zoneFromUserInfo(notification.userInfo) else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.delegate?.placeAlertMe(self, didEnter: zone)
+        }
+    }
+
+    @objc private func onDidExitZone(_ notification: NSNotification) {
+        guard let zone = zoneFromUserInfo(notification.userInfo) else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.delegate?.placeAlertMe(self, didExit: zone)
+        }
+    }
+
+    private func zoneFromUserInfo(_ userInfo: [AnyHashable: Any]?) -> GeoZone? {
+        guard let userInfo = userInfo,
+              let id = userInfo["id"] as? String,
+              let latitude = userInfo["latitude"] as? Double,
+              let longitude = userInfo["longitude"] as? Double,
+              let radius = userInfo["radiusMeters"] as? Double else { return nil }
+        return GeoZone(
+            id: id,
+            latitude: latitude,
+            longitude: longitude,
+            radiusMeters: radius,
+            notifyOnEntry: userInfo["notifyOnEntry"] as? Bool ?? true,
+            notifyOnExit: userInfo["notifyOnExit"] as? Bool ?? true
+        )
     }
 
     deinit {
@@ -114,7 +144,7 @@ public class PlaceAlertMe {
     }
 }
 
-// MARK: - Public Delegate
+// MARK: - Delegate
 
 public protocol PlaceAlertMeDelegate: AnyObject {
     func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateGeofenceStatus status: GeofenceStatus)
@@ -122,7 +152,15 @@ public protocol PlaceAlertMeDelegate: AnyObject {
     func placeAlertMe(_ tracker: PlaceAlertMe, didExitZone id: String, name: String)
 }
 
-// MARK: - Public Data Structures
+// Default implementations so existing delegates compile without changes.
+public extension PlaceAlertMeDelegate {
+    func placeAlertMe(_ tracker: PlaceAlertMe, didEnter zone: GeoZone) {}
+    func placeAlertMe(_ tracker: PlaceAlertMe, didExit zone: GeoZone) {}
+    func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateGeofenceStatus status: GeofenceStatus) {}
+    func placeAlertMe(_ tracker: PlaceAlertMe, didChangeZoneStatus isInside: Bool) {}
+}
+
+// MARK: - Status struct
 
 public struct GeofenceStatus {
     public let isInside: Bool
@@ -135,3 +173,4 @@ public struct GeofenceStatus {
         TimeInterval(nextIntervalMs) / 1000.0
     }
 }
+#endif

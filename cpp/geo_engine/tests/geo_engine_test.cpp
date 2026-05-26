@@ -1,6 +1,12 @@
 #include <gtest/gtest.h>
 #include "geo_engine.h"
+#include "history_engine.h"
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <sys/stat.h>
+#include <unistd.h>
 
 using namespace geo_engine;
 

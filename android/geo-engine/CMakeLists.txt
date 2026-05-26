@@ -11,7 +11,9 @@ endif()
 # Core geofencing engine library
 add_library(geo_engine_core STATIC
     ../../cpp/geo_engine/geo_engine.cpp
+    ../../cpp/geo_engine/history_engine.cpp
     ../../cpp/geo_engine/include/geo_engine.h
+    ../../cpp/geo_engine/include/history_engine.h
 )
 
 target_include_directories(geo_engine_core PUBLIC

@@ -1,0 +1,44 @@
+{
+  "buildFiles": [
+    "/Users/lynkto_1/PlaceAlertMe/android/geo-engine/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/lynkto_1/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/lynkto_1/PlaceAlertMe/android/geo-engine/.cxx/RelWithDebInfo/1z3c2f6l/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/lynkto_1/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/lynkto_1/PlaceAlertMe/android/geo-engine/.cxx/RelWithDebInfo/1z3c2f6l/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "geo_engine_core::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "geo_engine_core",
+      "output": "/Users/lynkto_1/PlaceAlertMe/android/geo-engine/.cxx/RelWithDebInfo/1z3c2f6l/arm64-v8a/libgeo_engine_core.a"
+    },
+    "geo_engine_jni::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "geo_engine_jni",
+      "output": "/Users/lynkto_1/PlaceAlertMe/android/geo-engine/build/intermediates/cxx/RelWithDebInfo/1z3c2f6l/obj/arm64-v8a/libgeo_engine_jni.so",
+      "runtimeFiles": []
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/Users/lynkto_1/Library/Android/sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/Users/lynkto_1/Library/Android/sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}

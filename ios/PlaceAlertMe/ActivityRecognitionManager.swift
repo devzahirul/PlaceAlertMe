@@ -1,4 +1,6 @@
 import Foundation
+
+#if os(iOS)
 import CoreMotion
 
 internal protocol ActivityRecognitionDelegate: AnyObject {
@@ -51,3 +53,4 @@ internal class ActivityRecognitionManager {
         return activity.walking || activity.running || activity.cycling || activity.automotive
     }
 }
+#endif
