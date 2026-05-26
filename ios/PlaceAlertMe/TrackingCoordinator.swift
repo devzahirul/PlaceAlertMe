@@ -47,6 +47,9 @@ internal class TrackingCoordinator: NSObject {
         locationManager.addGeofenceZone(id: id, name: name,
                                          latitude: latitude, longitude: longitude,
                                          radiusMeters: radiusMeters)
+        // Also register in zonesById so postTransition can look up the GeoZone.
+        let zone = GeoZone(id: id, latitude: latitude, longitude: longitude, radiusMeters: radiusMeters)
+        zonesById[id] = zone
     }
 
     func clearGeofenceZones() {
@@ -167,9 +170,16 @@ extension TrackingCoordinator: LocationManagerDelegate {
             ]
         )
 
-        // Per-zone transitions are already computed by the shared C++ engine.
+        // Per-zone transitions from the stateful C++ engine.
+        // Convert to GeoEngineZoneTransition so postTransition can look up the GeoZone.
         for transition in response.transitions {
-            postTransition(transition)
+            let geo = GeoEngineZoneTransition(
+                zoneId: transition.zoneId,
+                isInside: transition.type == .enter,
+                zoneIndex: -1,
+                distanceMeters: transition.distanceMeters
+            )
+            postTransition(geo)
         }
     }
 
