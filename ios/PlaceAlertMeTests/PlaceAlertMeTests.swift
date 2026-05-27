@@ -460,6 +460,190 @@ class PlaceAlertMeTests: XCTestCase {
         XCTAssertEqual(history.first?.durationMs, 49000)
         PlaceVisitStore.shared.clearHistory()
     }
+
+    // MARK: - PlaceVisit Duration
+
+    func testVisitDurationCalculation() {
+        PlaceVisitStore.shared.clearHistory()
+        let manager = GeoEngineManager.shared
+        manager.clearZones()
+        manager.addZone(id: "work", name: "Work", latitude: 37.7749, longitude: -122.4194, radiusMeters: 200.0)
+
+        _ = manager.processLocation(latitude: 37.7749, longitude: -122.4194,
+                                     speedMps: 0.0, accuracyMeters: 10.0, timestampMs: 1000)
+        let r = manager.processLocation(latitude: 37.7749, longitude: -122.4194,
+                                         speedMps: 0.0, accuracyMeters: 10.0, timestampMs: 12000)
+        if let t = r.transitions.first, t.type == .enter {
+            PlaceVisitStore.shared.recordEntry(transition: t)
+        }
+
+        // durationMs should be nil while still active
+        let active = PlaceVisitStore.shared.getActiveVisits()
+        XCTAssertNil(active.first?.durationMs, "Active visit should have nil duration")
+        XCTAssertTrue(active.first?.isActive ?? false)
+
+        // record exit 45 000 ms after arrival
+        PlaceVisitStore.shared.recordExit(zoneId: "work", timestampMs: 12000 + 45000)
+        let history = PlaceVisitStore.shared.getVisitHistory(zoneId: "work")
+        XCTAssertEqual(history.first?.durationMs, 45000, "Duration should equal departure - arrival")
+        XCTAssertFalse(history.first?.isActive ?? true)
+        PlaceVisitStore.shared.clearHistory()
+    }
+
+    // MARK: - PlaceVisit Max Capacity
+
+    func testPlaceVisitStoreMaxCapacity() {
+        PlaceVisitStore.shared.clearHistory()
+
+        for i in 0..<501 {
+            PlaceVisitStore.shared.recordEntry(transition: ZoneTransition(
+                zoneId: "cap", zoneName: "Cap", type: .enter,
+                distanceMeters: 0, latitude: 0.0, longitude: 0.0,
+                speedMps: 0.0, timestampMs: Int64(i) * 1000
+            ))
+        }
+
+        let all = PlaceVisitStore.shared.getAllVisitHistory(limit: 1000)
+        XCTAssertLessThanOrEqual(all.count, 500, "Store should cap at 500 visits")
+        PlaceVisitStore.shared.clearHistory()
+    }
+
+    // MARK: - Transition Location Context
+
+    func testTransitionLocationAndSpeedContext() {
+        let manager = GeoEngineManager.shared
+        manager.clearZones()
+        manager.addZone(id: "loc", name: "Loc", latitude: 37.7749, longitude: -122.4194, radiusMeters: 200.0)
+
+        _ = manager.processLocation(latitude: 37.7749, longitude: -122.4194,
+                                     speedMps: 3.5, accuracyMeters: 10.0, timestampMs: 0)
+        let r = manager.processLocation(latitude: 37.7749, longitude: -122.4194,
+                                         speedMps: 3.5, accuracyMeters: 10.0, timestampMs: 11000)
+
+        XCTAssertEqual(r.transitions.count, 1)
+        let t = r.transitions.first!
+        XCTAssertEqual(t.latitude,  37.7749,  accuracy: 0.0001)
+        XCTAssertEqual(t.longitude, -122.4194, accuracy: 0.0001)
+        XCTAssertEqual(t.speedMps, 3.5, accuracy: 0.01)
+        XCTAssertEqual(t.timestampMs, 11000)
+    }
+
+    // MARK: - Public API: getCurrentPlaces / getAllVisitHistory
+
+    func testGetCurrentPlacesPublicAPI() {
+        PlaceVisitStore.shared.clearHistory()
+        let manager = GeoEngineManager.shared
+        manager.clearZones()
+        manager.addZone(id: "gym", name: "Gym", latitude: 37.7749, longitude: -122.4194, radiusMeters: 200.0)
+
+        _ = manager.processLocation(latitude: 37.7749, longitude: -122.4194,
+                                     speedMps: 0.0, accuracyMeters: 10.0, timestampMs: 0)
+        let r = manager.processLocation(latitude: 37.7749, longitude: -122.4194,
+                                         speedMps: 0.0, accuracyMeters: 10.0, timestampMs: 11000)
+        if let t = r.transitions.first, t.type == .enter {
+            PlaceVisitStore.shared.recordEntry(transition: t)
+        }
+
+        let current = PlaceAlertMe.shared.getCurrentPlaces()
+        XCTAssertGreaterThanOrEqual(current.count, 1, "getCurrentPlaces should return active visits")
+        XCTAssertTrue(current.allSatisfy { $0.isActive }, "All returned visits should be active")
+        PlaceVisitStore.shared.clearHistory()
+    }
+
+    func testGetAllVisitHistory() {
+        PlaceVisitStore.shared.clearHistory()
+        let manager = GeoEngineManager.shared
+        manager.clearZones()
+        manager.addZone(id: "z1", name: "Z1", latitude: 37.7749, longitude: -122.4194, radiusMeters: 200.0)
+        manager.addZone(id: "z2", name: "Z2", latitude: 34.0522, longitude: -118.2437, radiusMeters: 200.0)
+
+        // Record one visit for each zone
+        let t1 = ZoneTransition(zoneId: "z1", zoneName: "Z1", type: .enter,
+                                distanceMeters: 0, latitude: 37.7749, longitude: -122.4194,
+                                speedMps: 0, timestampMs: 1000)
+        let t2 = ZoneTransition(zoneId: "z2", zoneName: "Z2", type: .enter,
+                                distanceMeters: 0, latitude: 34.0522, longitude: -118.2437,
+                                speedMps: 0, timestampMs: 2000)
+        PlaceVisitStore.shared.recordEntry(transition: t1)
+        PlaceVisitStore.shared.recordEntry(transition: t2)
+
+        let all = PlaceAlertMe.shared.getAllVisitHistory()
+        XCTAssertEqual(all.count, 2)
+        // Results should be sorted newest-first
+        XCTAssertEqual(all.first?.zoneId, "z2", "Newest visit should come first")
+        PlaceVisitStore.shared.clearHistory()
+    }
+
+    // MARK: - updateGeofenceZone Persistence
+
+    func testUpdateGeofenceZonePersistence() {
+        PlaceStore.shared.clear()
+        PlaceStore.shared.add(PlaceRecord(id: "upd", name: "OldName",
+                                          latitude: 37.7749, longitude: -122.4194, radiusMeters: 200.0))
+
+        // PlaceAlertMe.updateGeofenceZone patches name and radius
+        PlaceAlertMe.shared.updateGeofenceZone(id: "upd", name: "NewName", radiusMeters: 500.0)
+
+        let records = PlaceStore.shared.load()
+        let updated = records.first { $0.id == "upd" }
+        XCTAssertEqual(updated?.name, "NewName", "Name should be updated in PlaceStore")
+        XCTAssertEqual(updated?.radiusMeters, 500.0, accuracy: 0.1, "Radius should be updated in PlaceStore")
+        PlaceStore.shared.clear()
+    }
+
+    func testUpdateGeofenceZonePartialUpdate() {
+        PlaceStore.shared.clear()
+        PlaceStore.shared.add(PlaceRecord(id: "part", name: "OrigName",
+                                          latitude: 10.0, longitude: 20.0, radiusMeters: 300.0))
+
+        // Update only radius; name should remain
+        PlaceAlertMe.shared.updateGeofenceZone(id: "part", radiusMeters: 800.0)
+
+        let records = PlaceStore.shared.load()
+        let updated = records.first { $0.id == "part" }
+        XCTAssertEqual(updated?.name, "OrigName", "Name should be unchanged when not specified")
+        XCTAssertEqual(updated?.radiusMeters, 800.0, accuracy: 0.1)
+        PlaceStore.shared.clear()
+    }
+
+    // MARK: - PlaceVisit arrivalLatitude / arrivalLongitude
+
+    func testVisitArrivalCoordinates() {
+        PlaceVisitStore.shared.clearHistory()
+        let t = ZoneTransition(zoneId: "coords", zoneName: "Coords", type: .enter,
+                               distanceMeters: 0, latitude: 51.5074, longitude: -0.1278,
+                               speedMps: 1.2, timestampMs: 5000)
+        PlaceVisitStore.shared.recordEntry(transition: t)
+
+        let active = PlaceVisitStore.shared.getActiveVisits()
+        XCTAssertEqual(active.first?.arrivalLatitude,  51.5074,  accuracy: 0.0001)
+        XCTAssertEqual(active.first?.arrivalLongitude, -0.1278, accuracy: 0.0001)
+        XCTAssertEqual(active.first?.arrivalSpeedMps,  1.2,      accuracy: 0.01)
+        XCTAssertEqual(active.first?.arrivalTimestampMs, 5000)
+        PlaceVisitStore.shared.clearHistory()
+    }
+
+    // MARK: - getVisitHistory zoneId filter
+
+    func testVisitHistoryZoneIdFilter() {
+        PlaceVisitStore.shared.clearHistory()
+        PlaceVisitStore.shared.recordEntry(transition: ZoneTransition(
+            zoneId: "a", zoneName: "A", type: .enter,
+            distanceMeters: 0, latitude: 0, longitude: 0, speedMps: 0, timestampMs: 100))
+        PlaceVisitStore.shared.recordEntry(transition: ZoneTransition(
+            zoneId: "b", zoneName: "B", type: .enter,
+            distanceMeters: 0, latitude: 1, longitude: 1, speedMps: 0, timestampMs: 200))
+        PlaceVisitStore.shared.recordEntry(transition: ZoneTransition(
+            zoneId: "a", zoneName: "A", type: .enter,
+            distanceMeters: 0, latitude: 0, longitude: 0, speedMps: 0, timestampMs: 300))
+
+        let historyA = PlaceVisitStore.shared.getVisitHistory(zoneId: "a")
+        XCTAssertEqual(historyA.count, 2, "Should return only zone 'a' visits")
+        XCTAssertTrue(historyA.allSatisfy { $0.zoneId == "a" })
+        // Newest first
+        XCTAssertGreaterThan(historyA[0].arrivalTimestampMs, historyA[1].arrivalTimestampMs)
+        PlaceVisitStore.shared.clearHistory()
+    }
 }
 
 // MARK: - Mock Delegate
