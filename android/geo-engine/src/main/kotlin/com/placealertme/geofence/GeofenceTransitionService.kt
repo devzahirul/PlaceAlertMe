@@ -17,7 +17,10 @@ internal class GeofenceTransitionService : JobIntentService() {
 
         for (geofence in triggeringGeofences) {
             val action = when (transitionType) {
-                Geofence.GEOFENCE_TRANSITION_ENTER -> GeoTracker.ACTION_ZONE_ENTER
+                // DWELL is the confirmed arrival (fired after the 10s loitering
+                // delay), so it maps to ENTER. Bare ENTER is intentionally not
+                // registered, so it never reaches here.
+                Geofence.GEOFENCE_TRANSITION_DWELL -> GeoTracker.ACTION_ZONE_ENTER
                 Geofence.GEOFENCE_TRANSITION_EXIT  -> GeoTracker.ACTION_ZONE_EXIT
                 else -> continue
             }
