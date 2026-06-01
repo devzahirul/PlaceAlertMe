@@ -11,6 +11,8 @@ final class TransitionHistoryStore: ObservableObject {
 
     private let manager: NavigationHistoryManager
     private let retentionDays = 90
+    private var lastRecordedActivityType: String?
+    private var lastRecordedActivityDayKey: String?
 
     convenience init() {
         self.init(directoryURL: Self.defaultDirectoryURL())
@@ -79,6 +81,43 @@ final class TransitionHistoryStore: ObservableObject {
         )
 
         if saved {
+            pruneOldHistory(now: timestamp)
+            refresh()
+        }
+        return saved
+    }
+
+    @discardableResult
+    func recordActivity(status: PlaceAlertActivityStatus) -> Bool {
+        recordActivity(
+            activityType: status.activityType.rawValue,
+            confidence: status.confidence.rawValue,
+            timestamp: status.timestamp
+        )
+    }
+
+    @discardableResult
+    func recordActivity(
+        activityType: String,
+        confidence: String,
+        timestamp: Date = Date()
+    ) -> Bool {
+        let dayKey = Self.dayKey(for: timestamp)
+        if lastRecordedActivityType == activityType,
+           lastRecordedActivityDayKey == dayKey {
+            return false
+        }
+
+        let saved = manager.appendActivityEvent(
+            dayKey: dayKey,
+            timestamp: timestamp,
+            activityType: activityType,
+            confidence: confidence
+        )
+
+        if saved {
+            lastRecordedActivityType = activityType
+            lastRecordedActivityDayKey = dayKey
             pruneOldHistory(now: timestamp)
             refresh()
         }

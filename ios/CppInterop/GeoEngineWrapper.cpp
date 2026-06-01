@@ -264,6 +264,28 @@ bool ios_navigation_history_append_alert_event(const char *directory,
     );
 }
 
+bool ios_navigation_history_append_activity_event(const char *directory,
+                                                  const char *dayKey,
+                                                  long long timestampMs,
+                                                  const char *activityType,
+                                                  const char *confidence) {
+    if (!directory || !dayKey) {
+        return false;
+    }
+
+    HistoryActivityEvent event(
+        static_cast<int64_t>(timestampMs),
+        activityType ? std::string(activityType) : std::string(),
+        confidence ? std::string(confidence) : std::string()
+    );
+
+    return g_ios_history_engine.appendActivityEvent(
+        std::string(directory),
+        std::string(dayKey),
+        event
+    );
+}
+
 int ios_navigation_history_list_day_summaries(const char *directory,
                                               NavigationHistoryDaySummaryResult *outSummaries,
                                               int maxSummaries) {

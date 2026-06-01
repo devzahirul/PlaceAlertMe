@@ -30,6 +30,20 @@ public struct NavigationHistoryAlertEvent: Codable, Hashable, Identifiable {
     }
 }
 
+public struct NavigationHistoryActivityEvent: Codable, Hashable, Identifiable {
+    public let timestampMs: Int64
+    public let activityType: String
+    public let confidence: String
+
+    public var id: String {
+        "\(timestampMs)-\(activityType)-\(confidence)"
+    }
+
+    public var date: Date {
+        Date(timeIntervalSince1970: TimeInterval(timestampMs) / 1000.0)
+    }
+}
+
 public struct NavigationHistoryDaySummary: Codable, Hashable, Identifiable {
     public let dayKey: String
     public let startTimestampMs: Int64
@@ -54,6 +68,38 @@ public struct NavigationHistoryDay: Codable, Hashable {
     public let summary: NavigationHistoryDaySummary
     public let points: [NavigationHistoryRoutePoint]
     public let alertEvents: [NavigationHistoryAlertEvent]
+    public let activityEvents: [NavigationHistoryActivityEvent]
+
+    public init(
+        dayKey: String,
+        summary: NavigationHistoryDaySummary,
+        points: [NavigationHistoryRoutePoint],
+        alertEvents: [NavigationHistoryAlertEvent],
+        activityEvents: [NavigationHistoryActivityEvent] = []
+    ) {
+        self.dayKey = dayKey
+        self.summary = summary
+        self.points = points
+        self.alertEvents = alertEvents
+        self.activityEvents = activityEvents
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case dayKey
+        case summary
+        case points
+        case alertEvents
+        case activityEvents
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        dayKey = try container.decode(String.self, forKey: .dayKey)
+        summary = try container.decode(NavigationHistoryDaySummary.self, forKey: .summary)
+        points = try container.decode([NavigationHistoryRoutePoint].self, forKey: .points)
+        alertEvents = try container.decode([NavigationHistoryAlertEvent].self, forKey: .alertEvents)
+        activityEvents = try container.decodeIfPresent([NavigationHistoryActivityEvent].self, forKey: .activityEvents) ?? []
+    }
 }
 
 public final class NavigationHistoryManager {
@@ -126,6 +172,30 @@ public final class NavigationHistoryManager {
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    @discardableResult
+    public func appendActivityEvent(
+        dayKey: String,
+        timestamp: Date,
+        activityType: String,
+        confidence: String
+    ) -> Bool {
+        directoryURL.path.withCString { directory in
+            dayKey.withCString { day in
+                activityType.withCString { activityTypePointer in
+                    confidence.withCString { confidencePointer in
+                        ios_navigation_history_append_activity_event(
+                            directory,
+                            day,
+                            Self.timestampMs(for: timestamp),
+                            activityTypePointer,
+                            confidencePointer
+                        )
                     }
                 }
             }

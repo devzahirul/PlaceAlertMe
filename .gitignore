@@ -6,6 +6,7 @@ cmake-build-*/
 # Android Gradle
 android/.gradle/
 android/build/
+**/.cxx/
 *.iml
 .idea/
 local.properties

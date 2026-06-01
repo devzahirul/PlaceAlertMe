@@ -207,6 +207,12 @@ std::string eventLine(const HistoryAlertEvent& event) {
            ",\"longitude\":" + numberToString(event.longitude) + "}";
 }
 
+std::string activityLine(const HistoryActivityEvent& event) {
+    return "{\"type\":\"activity\",\"timestampMs\":" + std::to_string(event.timestampMs) +
+           ",\"activityType\":\"" + escapeJson(event.activityType) +
+           "\",\"confidence\":\"" + escapeJson(event.confidence) + "\"}";
+}
+
 bool parsePointLine(const std::string& line, HistoryRoutePoint& point) {
     return extractInt64(line, "timestampMs", point.timestampMs) &&
            extractDouble(line, "latitude", point.latitude) &&
@@ -225,6 +231,14 @@ bool parseEventLine(const std::string& line, HistoryAlertEvent& event) {
     ok = extractString(line, "eventType", event.eventType) && ok;
     ok = extractDouble(line, "latitude", event.latitude) && ok;
     ok = extractDouble(line, "longitude", event.longitude) && ok;
+    return ok;
+}
+
+bool parseActivityLine(const std::string& line, HistoryActivityEvent& event) {
+    bool ok = true;
+    ok = extractInt64(line, "timestampMs", event.timestampMs) && ok;
+    ok = extractString(line, "activityType", event.activityType) && ok;
+    ok = extractString(line, "confidence", event.confidence) && ok;
     return ok;
 }
 
@@ -268,6 +282,15 @@ bool NavigationHistoryEngine::appendAlertEvent(const std::string& directory,
     return appendLine(filePath(directory, dayKey), eventLine(event));
 }
 
+bool NavigationHistoryEngine::appendActivityEvent(const std::string& directory,
+                                                  const std::string& dayKey,
+                                                  const HistoryActivityEvent& event) const {
+    if (!isValidDayKey(dayKey)) {
+        return false;
+    }
+    return appendLine(filePath(directory, dayKey), activityLine(event));
+}
+
 bool NavigationHistoryEngine::loadDay(const std::string& directory,
                                       const std::string& dayKey,
                                       HistoryDay& outDay) const {
@@ -301,6 +324,11 @@ bool NavigationHistoryEngine::loadDay(const std::string& directory,
             if (parseEventLine(line, event)) {
                 outDay.alertEvents.push_back(event);
             }
+        } else if (type == "activity") {
+            HistoryActivityEvent event;
+            if (parseActivityLine(line, event)) {
+                outDay.activityEvents.push_back(event);
+            }
         }
     }
 
@@ -310,6 +338,10 @@ bool NavigationHistoryEngine::loadDay(const std::string& directory,
               });
     std::sort(outDay.alertEvents.begin(), outDay.alertEvents.end(),
               [](const HistoryAlertEvent& lhs, const HistoryAlertEvent& rhs) {
+                  return lhs.timestampMs < rhs.timestampMs;
+              });
+    std::sort(outDay.activityEvents.begin(), outDay.activityEvents.end(),
+              [](const HistoryActivityEvent& lhs, const HistoryActivityEvent& rhs) {
                   return lhs.timestampMs < rhs.timestampMs;
               });
 
@@ -348,6 +380,13 @@ std::string NavigationHistoryEngine::loadDayJson(const std::string& directory,
             out << ",";
         }
         out << eventLine(day.alertEvents[i]);
+    }
+    out << "],\"activityEvents\":[";
+    for (size_t i = 0; i < day.activityEvents.size(); ++i) {
+        if (i > 0) {
+            out << ",";
+        }
+        out << activityLine(day.activityEvents[i]);
     }
     out << "]}";
     return out.str();

@@ -63,6 +63,37 @@ object GeoEngineJNI {
      */
     external fun nearestZones(latitude: Double, longitude: Double, maxCount: Int): List<NearestZone>
 
+    external fun appendHistoryRoutePoint(
+        directory: String,
+        dayKey: String,
+        timestampMs: Long,
+        latitude: Double,
+        longitude: Double,
+        speedMps: Double,
+        minDistanceMeters: Double = 10.0,
+        minIntervalMs: Long = 60_000L
+    ): Boolean
+
+    external fun appendHistoryAlertEvent(
+        directory: String,
+        dayKey: String,
+        id: String,
+        timestampMs: Long,
+        alertId: String,
+        task: String,
+        place: String,
+        address: String,
+        eventType: String,
+        latitude: Double,
+        longitude: Double
+    ): Boolean
+
+    external fun loadHistoryDayJson(directory: String, dayKey: String): String
+
+    external fun listHistoryDaySummariesJson(directory: String): String
+
+    external fun pruneHistoryBeforeDay(directory: String, minimumDayKey: String): Int
+
     /**
      * Shared movement threshold check.
      */

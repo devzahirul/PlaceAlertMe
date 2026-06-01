@@ -412,6 +412,29 @@ TEST_F(NavigationHistoryEngineTest, AlertEventsArePersistedInDay) {
     EXPECT_EQ(day.summary.alertEventCount, 1);
 }
 
+TEST_F(NavigationHistoryEngineTest, ActivityEventsArePersistedInDay) {
+    EXPECT_TRUE(history.appendActivityEvent(
+        directory,
+        "2026-05-21",
+        HistoryActivityEvent(3000, "walking", "high")
+    ));
+    EXPECT_TRUE(history.appendActivityEvent(
+        directory,
+        "2026-05-21",
+        HistoryActivityEvent(1000, "stationary", "medium")
+    ));
+
+    HistoryDay day;
+    ASSERT_TRUE(history.loadDay(directory, "2026-05-21", day));
+    ASSERT_EQ(day.activityEvents.size(), 2);
+    EXPECT_EQ(day.activityEvents[0].activityType, "stationary");
+    EXPECT_EQ(day.activityEvents[1].activityType, "walking");
+    EXPECT_NE(
+        history.loadDayJson(directory, "2026-05-21").find("\"activityEvents\""),
+        std::string::npos
+    );
+}
+
 TEST_F(NavigationHistoryEngineTest, ListsSummariesAndPrunesOldDays) {
     EXPECT_TRUE(history.appendRoutePoint(
         directory,

@@ -146,6 +146,7 @@ internal class TrackingCoordinator: NSObject {
 
     static let didEnterZoneNotification = NSNotification.Name("PlaceAlertMeDidEnterZone")
     static let didExitZoneNotification = NSNotification.Name("PlaceAlertMeDidExitZone")
+    static let didUpdateActivityNotification = NSNotification.Name("PlaceAlertMeDidUpdateActivity")
 
     static func encodeZone(_ zone: GeoZone) -> [String: Any] {
         return [
@@ -195,6 +196,17 @@ extension TrackingCoordinator: LocationManagerDelegate {
 
 extension TrackingCoordinator: ActivityRecognitionDelegate {
     func activityRecognitionManager(_ manager: ActivityRecognitionManager, didDetectActivity activity: CMMotionActivity) {
+        let status = ActivityRecognitionManager.status(from: activity)
+        NotificationCenter.default.post(
+            name: Self.didUpdateActivityNotification,
+            object: nil,
+            userInfo: [
+                "activityType": status.activityType.rawValue,
+                "confidence": status.confidence.rawValue,
+                "timestamp": status.timestamp,
+            ]
+        )
+
         if ActivityRecognitionManager.isActivityStill(activity) {
             locationManager.pauseTracking()
         } else if ActivityRecognitionManager.isActivityMoving(activity) {

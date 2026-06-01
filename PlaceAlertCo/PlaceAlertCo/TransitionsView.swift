@@ -149,6 +149,11 @@ struct TransitionDayDetailView: View {
     @StateObject private var store = TransitionHistoryStore.shared
     @State private var day: NavigationHistoryDay?
     @State private var position: MapCameraPosition = .automatic
+    @State private var roadRouteCoordinates: [CLLocationCoordinate2D]?
+    @State private var routeLoadTask: Task<Void, Never>?
+    @State private var roadTimelineItems: [TransitionRoadTimelineItem] = []
+    @State private var roadTimelineLoadTask: Task<Void, Never>?
+    @State private var isLoadingRoadTimeline = false
     @Environment(\.colorScheme) var colorScheme
 
     var bgColor: Color { colorScheme == .dark ? RounderTheme.bgDark : RounderTheme.bgLight }
@@ -166,6 +171,7 @@ struct TransitionDayDetailView: View {
 
                 if let day {
                     summaryGrid(day.summary)
+                    roadTimelineSection
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("ALERTS")
@@ -195,20 +201,27 @@ struct TransitionDayDetailView: View {
         .navigationTitle(displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: loadDay)
+        .onDisappear {
+            routeLoadTask?.cancel()
+            routeLoadTask = nil
+            roadTimelineLoadTask?.cancel()
+            roadTimelineLoadTask = nil
+        }
     }
 
     @ViewBuilder
     private var routeMap: some View {
         if let day {
             Map(position: $position) {
-                let coordinates = routeCoordinates(for: day)
+                let rawCoordinates = routeCoordinates(for: day)
+                let displayCoordinates = roadRouteCoordinates ?? rawCoordinates
 
-                if coordinates.count > 1 {
-                    MapPolyline(coordinates: coordinates)
+                if displayCoordinates.count > 1 {
+                    MapPolyline(coordinates: displayCoordinates)
                         .stroke(RounderTheme.accents[0].color, lineWidth: 4)
                 }
 
-                if let first = coordinates.first {
+                if let first = rawCoordinates.first {
                     Annotation("Start", coordinate: first) {
                         Circle()
                             .fill(RounderTheme.success)
@@ -217,7 +230,7 @@ struct TransitionDayDetailView: View {
                     }
                 }
 
-                if coordinates.count > 1, let last = coordinates.last {
+                if rawCoordinates.count > 1, let last = rawCoordinates.last {
                     Annotation("End", coordinate: last) {
                         Circle()
                             .fill(RounderTheme.danger)
@@ -233,6 +246,12 @@ struct TransitionDayDetailView: View {
                             .foregroundColor(.white)
                             .padding(8)
                             .background(RounderTheme.accents[0].color, in: Circle())
+                    }
+                }
+
+                ForEach(TransitionActivityBoundaryBuilder.boundaries(for: day)) { badge in
+                    Annotation(badge.accessibilityLabel, coordinate: badge.coordinate) {
+                        ActivityRouteBadge(badge: badge)
                     }
                 }
             }
@@ -256,15 +275,82 @@ struct TransitionDayDetailView: View {
         .padding(.horizontal, 24)
     }
 
+    private var roadTimelineSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("ROADS")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .tracking(1.2)
+                .foregroundColor(mutedColor)
+
+            if isLoadingRoadTimeline {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Loading road timeline...")
+                        .font(.system(size: 14))
+                        .foregroundColor(mutedColor)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(colorScheme == .dark ? RounderTheme.surfaceDark : RounderTheme.surfaceLight, in: RoundedRectangle(cornerRadius: 16))
+            } else if roadTimelineItems.isEmpty {
+                Text("Road names unavailable for this route.")
+                    .font(.system(size: 14))
+                    .foregroundColor(mutedColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(colorScheme == .dark ? RounderTheme.surfaceDark : RounderTheme.surfaceLight, in: RoundedRectangle(cornerRadius: 16))
+            } else {
+                ForEach(roadTimelineItems) { item in
+                    TransitionRoadTimelineRow(item: item)
+                }
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+
     private var displayTitle: String {
         guard let date = Self.dayFormatter.date(from: dayKey) else { return dayKey }
         return date.formatted(date: .abbreviated, time: .omitted)
     }
 
     private func loadDay() {
+        routeLoadTask?.cancel()
+        roadTimelineLoadTask?.cancel()
+        roadRouteCoordinates = nil
+        roadTimelineItems = []
+        isLoadingRoadTimeline = false
+
         day = store.loadDay(dayKey: dayKey)
         if let day {
             focusMap(on: day)
+            loadRoadRoute(for: day)
+            loadRoadTimeline(for: day)
+        }
+    }
+
+    private func loadRoadRoute(for day: NavigationHistoryDay) {
+        let rawCoordinates = routeCoordinates(for: day)
+        guard rawCoordinates.count > 1 else { return }
+
+        routeLoadTask = Task {
+            let resolvedCoordinates = await RoadRouteResolver.shared.roadCoordinates(
+                dayKey: day.dayKey,
+                rawCoordinates: rawCoordinates
+            )
+            guard !Task.isCancelled else { return }
+            roadRouteCoordinates = resolvedCoordinates
+        }
+    }
+
+    private func loadRoadTimeline(for day: NavigationHistoryDay) {
+        guard !day.points.isEmpty else { return }
+
+        isLoadingRoadTimeline = true
+        roadTimelineLoadTask = Task {
+            let items = await TransitionRoadTimelineResolver.shared.timeline(for: day)
+            guard !Task.isCancelled else { return }
+            roadTimelineItems = items
+            isLoadingRoadTimeline = false
         }
     }
 
@@ -354,6 +440,72 @@ private struct TransitionAlertEventRow: View {
         }
         .padding(16)
         .background(bgColor, in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private struct TransitionRoadTimelineRow: View {
+    let item: TransitionRoadTimelineItem
+    @Environment(\.colorScheme) var colorScheme
+
+    var bgColor: Color { colorScheme == .dark ? RounderTheme.surfaceDark : RounderTheme.surfaceLight }
+    var textColor: Color { colorScheme == .dark ? RounderTheme.inkDark : RounderTheme.inkLight }
+    var mutedColor: Color { colorScheme == .dark ? RounderTheme.mutedDark : RounderTheme.mutedLight }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "road.lanes")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 34, height: 34)
+                .background(RounderTheme.accents[0].color, in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.roadName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(textColor)
+                    .lineLimit(2)
+
+                Text(item.timeText)
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(mutedColor)
+            }
+
+            Spacer()
+        }
+        .padding(16)
+        .background(bgColor, in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private struct ActivityRouteBadge: View {
+    let badge: TransitionActivityBoundary
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(badge.title)
+                .font(.system(size: 10, weight: .bold))
+            Text(badge.timeText)
+                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(backgroundColor, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(.white.opacity(colorScheme == .dark ? 0.45 : 0.8), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+    }
+
+    private var backgroundColor: Color {
+        switch badge.role {
+        case .start:
+            return RounderTheme.success
+        case .end:
+            return RounderTheme.accents[0].color
+        }
     }
 }
 

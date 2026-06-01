@@ -154,6 +154,15 @@ bool ios_navigation_history_append_alert_event(const char *directory,
                                                double longitude);
 
 /**
+ * Append a motion/activity snapshot to a local day file.
+ */
+bool ios_navigation_history_append_activity_event(const char *directory,
+                                                  const char *dayKey,
+                                                  long long timestampMs,
+                                                  const char *activityType,
+                                                  const char *confidence);
+
+/**
  * List day summaries in reverse chronological order.
  */
 int ios_navigation_history_list_day_summaries(const char *directory,

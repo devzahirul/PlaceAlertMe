@@ -281,6 +281,12 @@ extension AlertStore: PlaceAlertMeDelegate {
         print("🎯 (global) Zone status: \(isInside ? "INSIDE some zone" : "OUTSIDE all zones")")
     }
 
+    func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateActivity status: PlaceAlertActivityStatus) {
+        DispatchQueue.main.async {
+            TransitionHistoryStore.shared.recordActivity(status: status)
+        }
+    }
+
     /// Precise per-zone entry. The package tells us exactly *which* zone
     /// via the GeoZone id (which we set to Alert.id.uuidString).
     func placeAlertMe(_ tracker: PlaceAlertMe, didEnter zone: GeoZone) {

@@ -128,6 +128,8 @@ public class PlaceAlertMe {
                        name: TrackingCoordinator.didEnterZoneNotification, object: nil)
         nc.addObserver(self, selector: #selector(onDidExitZone(_:)),
                        name: TrackingCoordinator.didExitZoneNotification, object: nil)
+        nc.addObserver(self, selector: #selector(onActivityChanged(_:)),
+                       name: TrackingCoordinator.didUpdateActivityNotification, object: nil)
     }
 
     @objc private func onGeofenceStatusChanged(_ notification: NSNotification) {
@@ -167,6 +169,22 @@ public class PlaceAlertMe {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.delegate?.placeAlertMe(self, didExit: zone)
+        }
+    }
+
+    @objc private func onActivityChanged(_ notification: NSNotification) {
+        guard let userInfo = notification.userInfo else { return }
+        let activityTypeRaw = userInfo["activityType"] as? String ?? PlaceAlertActivityType.unknown.rawValue
+        let confidenceRaw = userInfo["confidence"] as? String ?? PlaceAlertActivityConfidence.unknown.rawValue
+        let status = PlaceAlertActivityStatus(
+            activityType: PlaceAlertActivityType(rawValue: activityTypeRaw) ?? .unknown,
+            confidence: PlaceAlertActivityConfidence(rawValue: confidenceRaw) ?? .unknown,
+            timestamp: userInfo["timestamp"] as? Date ?? Date()
+        )
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.delegate?.placeAlertMe(self, didUpdateActivity: status)
         }
     }
 
@@ -210,12 +228,16 @@ public protocol PlaceAlertMeDelegate: AnyObject {
 
     /// Per-zone exit event. Fires exactly once per logical transition.
     func placeAlertMe(_ tracker: PlaceAlertMe, didExit zone: GeoZone)
+
+    /// Native iOS motion activity update from CoreMotion.
+    func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateActivity status: PlaceAlertActivityStatus)
 }
 
 // Default implementations so existing delegates compile without changes.
 public extension PlaceAlertMeDelegate {
     func placeAlertMe(_ tracker: PlaceAlertMe, didEnter zone: GeoZone) {}
     func placeAlertMe(_ tracker: PlaceAlertMe, didExit zone: GeoZone) {}
+    func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateActivity status: PlaceAlertActivityStatus) {}
     func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateGeofenceStatus status: GeofenceStatus) {}
     func placeAlertMe(_ tracker: PlaceAlertMe, didChangeZoneStatus isInside: Bool) {}
 }
@@ -231,6 +253,38 @@ public struct GeofenceStatus {
 
     public var nextIntervalSeconds: TimeInterval {
         TimeInterval(nextIntervalMs) / 1000.0
+    }
+}
+
+public enum PlaceAlertActivityType: String, Codable, Hashable {
+    case stationary
+    case walking
+    case running
+    case cycling
+    case automotive
+    case unknown
+}
+
+public enum PlaceAlertActivityConfidence: String, Codable, Hashable {
+    case low
+    case medium
+    case high
+    case unknown
+}
+
+public struct PlaceAlertActivityStatus: Codable, Hashable {
+    public let activityType: PlaceAlertActivityType
+    public let confidence: PlaceAlertActivityConfidence
+    public let timestamp: Date
+
+    public init(
+        activityType: PlaceAlertActivityType,
+        confidence: PlaceAlertActivityConfidence,
+        timestamp: Date
+    ) {
+        self.activityType = activityType
+        self.confidence = confidence
+        self.timestamp = timestamp
     }
 }
 #endif
