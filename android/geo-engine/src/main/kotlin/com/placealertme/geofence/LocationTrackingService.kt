@@ -36,6 +36,7 @@ internal class LocationTrackingService : Service() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         createNotificationChannel()
+        GeofenceNotificationManager.createChannel(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -96,6 +97,27 @@ internal class LocationTrackingService : Service() {
                     putExtra(GeoTracker.EXTRA_DISTANCE,  t.distanceMeters)
                     putExtra(GeoTracker.EXTRA_TIMESTAMP, t.timestampMs)
                 })
+                if (t.type == "ENTER") {
+                    GeofenceNotificationManager.notifyEnter(this@LocationTrackingService, t.zoneId, t.zoneName)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        GeofenceDatabase.getInstance(this@LocationTrackingService).visitDao().insert(
+                            PlaceVisitEntity(
+                                zoneId             = t.zoneId,
+                                zoneName           = t.zoneName,
+                                arrivalTimestampMs = t.timestampMs,
+                                arrivalLatitude    = t.latitude,
+                                arrivalLongitude   = t.longitude,
+                                arrivalSpeedMps    = t.speedMps
+                            )
+                        )
+                    }
+                } else {
+                    GeofenceNotificationManager.notifyExit(this@LocationTrackingService, t.zoneId, t.zoneName)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        GeofenceDatabase.getInstance(this@LocationTrackingService).visitDao()
+                            .closeVisit(t.zoneId, t.timestampMs)
+                    }
+                }
             }
 
             // Legacy global broadcast (backwards compat)

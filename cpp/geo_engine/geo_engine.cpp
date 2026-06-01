@@ -158,7 +158,8 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
                     status.pendingStateStartMs = 0;
                     response.transitions.push_back({
                         zone.id, zone.name, TransitionType::ENTER,
-                        distance, location.timestampMs
+                        distance, location.latitude, location.longitude, location.speedMps,
+                        location.timestampMs
                     });
                 }
                 break;
@@ -183,7 +184,8 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
                     status.pendingStateStartMs = 0;
                     response.transitions.push_back({
                         zone.id, zone.name, TransitionType::EXIT,
-                        distance, location.timestampMs
+                        distance, location.latitude, location.longitude, location.speedMps,
+                        location.timestampMs
                     });
                     insideAny = insideAny && false;  // re-check below
                 }
@@ -212,89 +214,6 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
     hasLastLocation  = true;
 
     return response;
-}
-
-bool GeoEngine::updateZoneState(const std::string& zoneId, bool isInside,
-                                ZoneTransition& transition) {
-    const int index = findZoneIndexById(zoneId);
-    if (index < 0) {
-        return false;
-    }
-
-    const auto& zone = zones[static_cast<size_t>(index)];
-    const std::string key = keyForZone(static_cast<size_t>(index));
-    const bool wasInside = insideStates.count(key) > 0 ? insideStates[key] : false;
-
-    if (wasInside == isInside) {
-        return false;
-    }
-
-    insideStates[key] = isInside;
-    if (!shouldNotify(zone, isInside)) {
-        return false;
-    }
-
-    transition = ZoneTransition(zone.id, isInside, 0.0, index);
-    return true;
-}
-
-std::vector<NearestZone> GeoEngine::nearestZones(double latitude, double longitude,
-                                                 size_t maxCount) const {
-    std::vector<NearestZone> nearest;
-    nearest.reserve(zones.size());
-
-    for (size_t i = 0; i < zones.size(); ++i) {
-        const auto& zone = zones[i];
-        const double distance = calculateDistance(latitude, longitude,
-                                                  zone.latitude, zone.longitude);
-        nearest.emplace_back(zone.id, static_cast<int>(i), distance);
-    }
-
-    std::sort(nearest.begin(), nearest.end(), [](const NearestZone& a, const NearestZone& b) {
-        if (a.distanceMeters == b.distanceMeters) {
-            return a.zoneIndex < b.zoneIndex;
-        }
-        return a.distanceMeters < b.distanceMeters;
-    });
-
-    if (nearest.size() > maxCount) {
-        nearest.resize(maxCount);
-    }
-    return nearest;
-}
-
-bool GeoEngine::hasMovedSignificantly(double fromLatitude, double fromLongitude,
-                                      double toLatitude, double toLongitude,
-                                      double thresholdMeters) const {
-    if (thresholdMeters <= 0.0) {
-        return true;
-    }
-    const double distance = calculateDistance(fromLatitude, fromLongitude,
-                                              toLatitude, toLongitude);
-    return distance >= thresholdMeters;
-}
-
-std::string GeoEngine::keyForZone(size_t index) const {
-    if (index >= zones.size()) {
-        return "";
-    }
-    if (!zones[index].id.empty()) {
-        return zones[index].id;
-    }
-    return "#" + std::to_string(index);
-}
-
-int GeoEngine::findZoneIndexById(const std::string& zoneId) const {
-    for (size_t i = 0; i < zones.size(); ++i) {
-        if (zones[i].id == zoneId) {
-            return static_cast<int>(i);
-        }
-    }
-    return -1;
-}
-
-bool GeoEngine::shouldNotify(const GeofenceZone& zone, bool isInside) const {
-    return isInside ? zone.notifyOnEntry : zone.notifyOnExit;
 }
 
 }  // namespace geo_engine

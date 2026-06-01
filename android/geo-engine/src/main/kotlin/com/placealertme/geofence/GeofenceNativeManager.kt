@@ -13,13 +13,17 @@ internal object GeofenceNativeManager {
         val geofence = Geofence.Builder()
             .setRequestId(id)
             .setCircularRegion(latitude, longitude, radiusMeters.toFloat().coerceAtLeast(150f))
-            .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT)
+            // DWELL (not bare ENTER) is the confirmed-arrival event: the OS only
+            // fires it after the user has loitered inside for setLoiteringDelay ms,
+            // matching the engine's 10s entry dwell. EXIT fires on boundary crossing
+            // and is cross-validated (buffer + dwell) by the C++ engine on the wake-up fix.
+            .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_DWELL or Geofence.GEOFENCE_TRANSITION_EXIT)
             .setLoiteringDelay(10_000)
             .setExpirationDuration(Geofence.NEVER_EXPIRE)
             .build()
 
         val request = GeofencingRequest.Builder()
-            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_DWELL)
             .addGeofence(geofence)
             .build()
 
@@ -39,8 +43,12 @@ internal object GeofenceNativeManager {
     }
 
     private fun getTransitionPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, GeofenceTransitionService::class.java)
-        return PendingIntent.getService(
+        // Deliver to a BroadcastReceiver (not getService): background service
+        // starts are blocked on Android O+, so a geofence transition fired while
+        // the app is terminated would otherwise be dropped. The receiver hands
+        // the work off to GeofenceTransitionService via enqueueWork (JobScheduler).
+        val intent = Intent(context, GeofenceBroadcastReceiver::class.java)
+        return PendingIntent.getBroadcast(
             context, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
         )

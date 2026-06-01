@@ -94,6 +94,10 @@ class AlertStore: NSObject, ObservableObject, CLLocationManagerDelegate {
     private func setupGeofenceDelegate() {
         guard !hasSetupGeofenceDelegate else { return }
         PlaceAlertMe.shared.delegate = self
+        // This app presents its own rich notifications (task text, haptics,
+        // history). Suppress the SDK's built-in enter/exit banners to avoid
+        // duplicates.
+        PlaceAlertMe.shared.sendsSystemNotifications = false
         hasSetupGeofenceDelegate = true
     }
 
@@ -126,39 +130,40 @@ class AlertStore: NSObject, ObservableObject, CLLocationManagerDelegate {
 
         let tracker = PlaceAlertMe.shared
 
-        // New ID-based API: convert active alerts into GeoZones so the
-        // per-zone delegate callbacks know exactly which alert was triggered.
-        let zones: [GeoZone] = alerts.filter(\.isActive).map { alert in
-            GeoZone(
+        // New ID-based API: register each active alert as a named geofence zone.
+        // Per-zone delegate callbacks (didEnterZone/didExitZone) identify the
+        // alert by id (Alert.id.uuidString). Trigger filtering (arriving/leaving)
+        // is enforced in the delegate handlers below — the engine itself has no
+        // per-zone entry/exit flags. Radii below 150 m are bumped to 150 m by the
+        // Life360-parity engine.
+        tracker.clearGeofenceZones()
+        let activeAlerts = alerts.filter(\.isActive)
+        for alert in activeAlerts {
+            tracker.addGeofenceZone(
                 id: alert.id.uuidString,
+                name: alert.place,
                 latitude: alert.latitude,
                 longitude: alert.longitude,
-                radiusMeters: alert.radiusMeters,
-                notifyOnEntry: alert.trigger == .arriving || alert.trigger == .both,
-                notifyOnExit: alert.trigger == .leaving || alert.trigger == .both
+                radiusMeters: alert.radiusMeters
             )
         }
-        tracker.setZones(zones)
 
-        print("📍 Registered \(zones.count) zone(s) with PlaceAlertMe")
-        for zone in zones {
-            print("📍   • id=\(zone.id) @ (\(zone.latitude), \(zone.longitude)) r=\(Int(zone.radiusMeters))m " +
-                  "entry=\(zone.notifyOnEntry) exit=\(zone.notifyOnExit)")
+        print("📍 Registered \(activeAlerts.count) zone(s) with PlaceAlertMe")
+        for alert in activeAlerts {
+            print("📍   • id=\(alert.id.uuidString) @ (\(alert.latitude), \(alert.longitude)) " +
+                  "r=\(Int(alert.radiusMeters))m trigger=\(alert.trigger.rawValue)")
         }
 
-        // Live tracking (continuous GPS + activity recognition).
+        // Live tracking (continuous GPS + activity recognition). Background
+        // CLCircularRegion monitoring (survives app termination) is now
+        // registered automatically by addGeofenceZone + startTracking, so there
+        // is no separate enableBackgroundMonitoring call.
         tracker.startTracking()
-
-        // System-level geofencing — survives app termination. Requires
-        // .authorizedAlways for the wake-up part; with .authorizedWhenInUse
-        // we still get foreground/background coverage which is better than
-        // nothing.
-        tracker.enableBackgroundMonitoring(maxRegions: 20)
 
         DispatchQueue.main.async { [weak self] in
             self?.isTracking = true
         }
-        print("✅ PlaceAlertMe live tracking started; background monitoring \(tracker.isBackgroundMonitoringEnabled ? "ON" : "OFF")")
+        print("✅ PlaceAlertMe live tracking started (background monitoring automatic)")
         logNotificationStatus()
     }
 
@@ -281,11 +286,17 @@ extension AlertStore: PlaceAlertMeDelegate {
         print("🎯 (global) Zone status: \(isInside ? "INSIDE some zone" : "OUTSIDE all zones")")
     }
 
+    func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateActivity status: PlaceAlertActivityStatus) {
+        DispatchQueue.main.async {
+            TransitionHistoryStore.shared.recordActivity(status: status)
+        }
+    }
+
     /// Precise per-zone entry. The package tells us exactly *which* zone
     /// via the GeoZone id (which we set to Alert.id.uuidString).
-    func placeAlertMe(_ tracker: PlaceAlertMe, didEnter zone: GeoZone) {
-        guard let alert = alertForZone(zone) else {
-            print("⚠️ didEnter zone \(zone.id) but no matching alert found")
+    func placeAlertMe(_ tracker: PlaceAlertMe, didEnterZone id: String, name: String) {
+        guard let alert = alertForZoneId(id) else {
+            print("⚠️ didEnterZone \(id) but no matching alert found")
             return
         }
         guard alert.isActive else { return }
@@ -297,9 +308,9 @@ extension AlertStore: PlaceAlertMeDelegate {
         sendNotification(for: alert, entering: true)
     }
 
-    func placeAlertMe(_ tracker: PlaceAlertMe, didExit zone: GeoZone) {
-        guard let alert = alertForZone(zone) else {
-            print("⚠️ didExit zone \(zone.id) but no matching alert found")
+    func placeAlertMe(_ tracker: PlaceAlertMe, didExitZone id: String, name: String) {
+        guard let alert = alertForZoneId(id) else {
+            print("⚠️ didExitZone \(id) but no matching alert found")
             return
         }
         guard alert.isActive else { return }
@@ -311,10 +322,9 @@ extension AlertStore: PlaceAlertMeDelegate {
         sendNotification(for: alert, entering: false)
     }
 
-    /// Look up the Alert that corresponds to a given GeoZone (matched by
-    /// uuid string).
-    private func alertForZone(_ zone: GeoZone) -> Alert? {
-        guard let uuid = UUID(uuidString: zone.id) else { return nil }
+    /// Look up the Alert that corresponds to a given zone id (Alert.id uuid string).
+    private func alertForZoneId(_ id: String) -> Alert? {
+        guard let uuid = UUID(uuidString: id) else { return nil }
         return alerts.first(where: { $0.id == uuid })
     }
 

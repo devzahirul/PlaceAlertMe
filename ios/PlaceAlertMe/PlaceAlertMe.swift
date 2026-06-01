@@ -1,5 +1,7 @@
 import Foundation
 
+#if os(iOS)
+
 public class PlaceAlertMe {
     public static let shared = PlaceAlertMe()
 
@@ -18,6 +20,13 @@ public class PlaceAlertMe {
 
     public func stopTracking() {
         coordinator.stopTracking()
+    }
+
+    /// When `false`, the SDK does not post its own enter/exit notifications,
+    /// leaving notification UX entirely to the host app. Default `true`.
+    public var sendsSystemNotifications: Bool {
+        get { PlaceNotificationManager.shared.isEnabled }
+        set { PlaceNotificationManager.shared.isEnabled = newValue }
     }
 
     public func addGeofenceZone(
@@ -43,6 +52,26 @@ public class PlaceAlertMe {
         coordinator.clearGeofenceZones()
     }
 
+    public func getCurrentPlaces() -> [PlaceVisit] {
+        PlaceVisitStore.shared.getActiveVisits()
+    }
+
+    public func getVisitHistory(zoneId: String, limit: Int = 50) -> [PlaceVisit] {
+        PlaceVisitStore.shared.getVisitHistory(zoneId: zoneId, limit: limit)
+    }
+
+    public func getAllVisitHistory(limit: Int = 100) -> [PlaceVisit] {
+        PlaceVisitStore.shared.getAllVisitHistory(limit: limit)
+    }
+
+    public func updateGeofenceZone(
+        id: String,
+        name: String? = nil,
+        radiusMeters: Double? = nil
+    ) {
+        coordinator.updateGeofenceZone(id: id, name: name, radiusMeters: radiusMeters)
+    }
+
     // MARK: - Internal: notification → delegate bridge
 
     private func setupNotificationListeners() {
@@ -62,6 +91,12 @@ public class PlaceAlertMe {
             self,
             selector: #selector(onGeofenceStatusChanged(_:)),
             name: NSNotification.Name("GeofenceStatusChanged"),
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onActivityChanged(_:)),
+            name: TrackingCoordinator.didUpdateActivityNotification,
             object: nil
         )
     }
@@ -90,12 +125,6 @@ public class PlaceAlertMe {
         guard let userInfo = notification.userInfo else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            let isInside = userInfo["isInside"] as? Bool ?? false
-            let distance = userInfo["distance"] as? Double ?? 0.0
-            let nextInterval = userInfo["nextInterval"] as? Int64 ?? 10000
-            let latitude = userInfo["latitude"] as? Double ?? 0.0
-            let longitude = userInfo["longitude"] as? Double ?? 0.0
-
             let status = GeofenceStatus(
                 isInside: userInfo["isInside"] as? Bool ?? false,
                 latitude: userInfo["latitude"] as? Double ?? 0,
@@ -104,6 +133,22 @@ public class PlaceAlertMe {
                 nextIntervalMs: userInfo["nextInterval"] as? Int64 ?? 10000
             )
             self.delegate?.placeAlertMe(self, didUpdateGeofenceStatus: status)
+        }
+    }
+
+    @objc private func onActivityChanged(_ notification: NSNotification) {
+        guard let userInfo = notification.userInfo else { return }
+        let activityTypeRaw = userInfo["activityType"] as? String ?? PlaceAlertActivityType.unknown.rawValue
+        let confidenceRaw = userInfo["confidence"] as? String ?? PlaceAlertActivityConfidence.unknown.rawValue
+        let status = PlaceAlertActivityStatus(
+            activityType: PlaceAlertActivityType(rawValue: activityTypeRaw) ?? .unknown,
+            confidence: PlaceAlertActivityConfidence(rawValue: confidenceRaw) ?? .unknown,
+            timestamp: userInfo["timestamp"] as? Date ?? Date()
+        )
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.delegate?.placeAlertMe(self, didUpdateActivity: status)
         }
     }
 
@@ -150,12 +195,16 @@ public protocol PlaceAlertMeDelegate: AnyObject {
     func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateGeofenceStatus status: GeofenceStatus)
     func placeAlertMe(_ tracker: PlaceAlertMe, didEnterZone id: String, name: String)
     func placeAlertMe(_ tracker: PlaceAlertMe, didExitZone id: String, name: String)
+
+    /// Native iOS motion activity update from CoreMotion.
+    func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateActivity status: PlaceAlertActivityStatus)
 }
 
 // Default implementations so existing delegates compile without changes.
 public extension PlaceAlertMeDelegate {
     func placeAlertMe(_ tracker: PlaceAlertMe, didEnter zone: GeoZone) {}
     func placeAlertMe(_ tracker: PlaceAlertMe, didExit zone: GeoZone) {}
+    func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateActivity status: PlaceAlertActivityStatus) {}
     func placeAlertMe(_ tracker: PlaceAlertMe, didUpdateGeofenceStatus status: GeofenceStatus) {}
     func placeAlertMe(_ tracker: PlaceAlertMe, didChangeZoneStatus isInside: Bool) {}
 }
@@ -173,4 +222,39 @@ public struct GeofenceStatus {
         TimeInterval(nextIntervalMs) / 1000.0
     }
 }
+
+// MARK: - Activity status (navigation-history / timeline)
+
+public enum PlaceAlertActivityType: String, Codable, Hashable {
+    case stationary
+    case walking
+    case running
+    case cycling
+    case automotive
+    case unknown
+}
+
+public enum PlaceAlertActivityConfidence: String, Codable, Hashable {
+    case low
+    case medium
+    case high
+    case unknown
+}
+
+public struct PlaceAlertActivityStatus: Codable, Hashable {
+    public let activityType: PlaceAlertActivityType
+    public let confidence: PlaceAlertActivityConfidence
+    public let timestamp: Date
+
+    public init(
+        activityType: PlaceAlertActivityType,
+        confidence: PlaceAlertActivityConfidence,
+        timestamp: Date
+    ) {
+        self.activityType = activityType
+        self.confidence = confidence
+        self.timestamp = timestamp
+    }
+}
+
 #endif

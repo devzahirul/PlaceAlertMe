@@ -23,6 +23,40 @@ object GeoEngineJNI {
         accuracyMeters: Double, timestampMs: Long
     ): String
 
+    external fun appendHistoryRoutePoint(
+        directory: String,
+        dayKey: String,
+        timestampMs: Long,
+        latitude: Double,
+        longitude: Double,
+        speedMps: Double,
+        minDistanceMeters: Double = 10.0,
+        minIntervalMs: Long = 60_000L
+    ): Boolean
+
+    external fun appendHistoryAlertEvent(
+        directory: String,
+        dayKey: String,
+        id: String,
+        timestampMs: Long,
+        alertId: String,
+        task: String,
+        place: String,
+        address: String,
+        eventType: String,
+        latitude: Double,
+        longitude: Double
+    ): Boolean
+
+    external fun loadHistoryDayJson(directory: String, dayKey: String): String
+
+    external fun listHistoryDaySummariesJson(directory: String): String
+
+    external fun pruneHistoryBeforeDay(directory: String, minimumDayKey: String): Int
+
+    /**
+     * Clear all zones
+     */
     external fun clearZones()
     external fun getZoneCount(): Int
 
@@ -31,6 +65,9 @@ object GeoEngineJNI {
         val zoneName: String,
         val type: String,        // "ENTER" or "EXIT"
         val distanceMeters: Double,
+        val latitude: Double,
+        val longitude: Double,
+        val speedMps: Double,
         val timestampMs: Long
     )
 
@@ -60,6 +97,9 @@ object GeoEngineJNI {
                 zoneName      = t.getString("zoneName"),
                 type          = t.getString("type"),
                 distanceMeters = t.getDouble("distanceMeters"),
+                latitude      = t.getDouble("latitude"),
+                longitude     = t.getDouble("longitude"),
+                speedMps      = t.getDouble("speedMps"),
                 timestampMs   = t.getLong("timestampMs")
             ))
         }

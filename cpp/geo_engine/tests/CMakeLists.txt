@@ -23,7 +23,7 @@ target_include_directories(geo_engine_lib PUBLIC
 )
 
 # Add test executable
-add_executable(geo_engine_test geo_engine_test.cpp)
+add_executable(geo_engine_test geo_engine_test.cpp history_engine_test.cpp)
 
 # Link against geo_engine and Google Test
 target_link_libraries(geo_engine_test

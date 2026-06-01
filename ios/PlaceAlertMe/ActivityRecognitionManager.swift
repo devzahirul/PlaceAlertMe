@@ -30,8 +30,8 @@ internal class ActivityRecognitionManager {
                 return
             }
 
-            if let activity = activities?.last {
-                self?.delegate?.activityRecognitionManager(self!, didDetectActivity: activity)
+            if let self, let activity = activities?.last {
+                self.delegate?.activityRecognitionManager(self, didDetectActivity: activity)
             }
         }
 
@@ -51,6 +51,36 @@ internal class ActivityRecognitionManager {
 
     static func isActivityMoving(_ activity: CMMotionActivity) -> Bool {
         return activity.walking || activity.running || activity.cycling || activity.automotive
+    }
+
+    static func status(from activity: CMMotionActivity) -> PlaceAlertActivityStatus {
+        PlaceAlertActivityStatus(
+            activityType: activityType(from: activity),
+            confidence: confidence(from: activity.confidence),
+            timestamp: activity.startDate
+        )
+    }
+
+    private static func activityType(from activity: CMMotionActivity) -> PlaceAlertActivityType {
+        if activity.automotive { return .automotive }
+        if activity.cycling { return .cycling }
+        if activity.running { return .running }
+        if activity.walking { return .walking }
+        if activity.stationary { return .stationary }
+        return .unknown
+    }
+
+    private static func confidence(from confidence: CMMotionActivityConfidence) -> PlaceAlertActivityConfidence {
+        switch confidence {
+        case .low:
+            return .low
+        case .medium:
+            return .medium
+        case .high:
+            return .high
+        @unknown default:
+            return .unknown
+        }
     }
 }
 #endif

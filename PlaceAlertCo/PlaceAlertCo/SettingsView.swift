@@ -47,18 +47,19 @@ struct SettingsView: View {
         )
     }
 
-    /// Binding for the Background refresh toggle. Toggling OFF disables
-    /// system-level CLCircularRegion monitoring; toggling ON re-enables
-    /// it (the AlertStore.setupPlaceAlertMe path will re-register zones).
+    /// Binding for the Background refresh toggle. With the Life360-parity engine,
+    /// CLCircularRegion monitoring is automatic while tracking is active, so the
+    /// toggle maps to start/stop tracking. Starting reloads the persisted zones
+    /// (PlaceStore) and re-registers their regions; stopping tears them down.
     var backgroundRefreshBinding: Binding<Bool> {
         Binding(
             get: { backgroundRefreshEnabled },
             set: { newValue in
                 backgroundRefreshEnabled = newValue
                 if newValue {
-                    PlaceAlertMe.shared.enableBackgroundMonitoring(maxRegions: 20)
+                    PlaceAlertMe.shared.startTracking()
                 } else {
-                    PlaceAlertMe.shared.disableBackgroundMonitoring()
+                    PlaceAlertMe.shared.stopTracking()
                 }
             }
         )

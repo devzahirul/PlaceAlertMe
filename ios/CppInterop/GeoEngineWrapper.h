@@ -15,6 +15,9 @@ struct GeoEngineTransition {
     char      zoneName[128];
     int       type;           // 0 = ENTER, 1 = EXIT
     double    distanceMeters;
+    double    latitude;
+    double    longitude;
+    double    speedMps;
     long long timestampMs;
 };
 
@@ -37,6 +40,18 @@ struct GeoEngineResult ios_geo_engine_process_location(double latitude, double l
                                                         long long timestampMs);
 void                   ios_geo_engine_clear_zones(void);
 int                    ios_geo_engine_get_zone_count(void);
+
+/**
+ * Daily navigation-history summary returned by the C++ history layer.
+ */
+struct NavigationHistoryDaySummaryResult {
+    const char *dayKey;
+    long long startTimestampMs;
+    long long endTimestampMs;
+    int pointCount;
+    int alertEventCount;
+    double distanceMeters;
+};
 
 /**
  * Append a route point to a local day file. Returns true only when the point
@@ -63,6 +78,15 @@ bool ios_navigation_history_append_alert_event(const char *directory,
                                                long long timestampMs,
                                                double latitude,
                                                double longitude);
+
+/**
+ * Append a motion/activity snapshot to a local day file.
+ */
+bool ios_navigation_history_append_activity_event(const char *directory,
+                                                  const char *dayKey,
+                                                  long long timestampMs,
+                                                  const char *activityType,
+                                                  const char *confidence);
 
 /**
  * List day summaries in reverse chronological order.

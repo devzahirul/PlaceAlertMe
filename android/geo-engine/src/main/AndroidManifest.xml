@@ -28,11 +28,19 @@
             android:exported="false"
             android:foregroundServiceType="location" />
 
-        <!-- Native GeofencingClient background transition service -->
+        <!-- Native GeofencingClient background transition service (JobIntentService:
+             bound by the system JobScheduler, so it must not be exported but does
+             require the BIND_JOB_SERVICE permission). -->
         <service
             android:name=".GeofenceTransitionService"
-            android:exported="true"
+            android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <!-- Receives geofence transitions (fires even in terminated state) and
+             hands them to GeofenceTransitionService via enqueueWork. -->
+        <receiver
+            android:name=".GeofenceBroadcastReceiver"
+            android:exported="false" />
 
         <!-- Re-register zones after device boot -->
         <receiver

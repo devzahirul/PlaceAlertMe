@@ -47,10 +47,27 @@ internal class TrackingCoordinator: NSObject {
         locationManager.addGeofenceZone(id: id, name: name,
                                          latitude: latitude, longitude: longitude,
                                          radiusMeters: radiusMeters)
+        // Also register in zonesById so postTransition can look up the GeoZone.
+        let zone = GeoZone(id: id, latitude: latitude, longitude: longitude, radiusMeters: radiusMeters)
+        zonesById[id] = zone
     }
 
     func clearGeofenceZones() {
         clearAllZones()
+    }
+
+    func updateGeofenceZone(id: String, name: String?, radiusMeters: Double?) {
+        guard let record = PlaceStore.shared.load().first(where: { $0.id == id }) else { return }
+        let newName   = name         ?? record.name
+        let newRadius = radiusMeters ?? record.radiusMeters
+        let updated   = PlaceRecord(id: id, name: newName,
+                                    latitude: record.latitude, longitude: record.longitude,
+                                    radiusMeters: newRadius)
+        PlaceStore.shared.add(updated)
+        GeoEngineManager.shared.removeZone(id: id)
+        GeoEngineManager.shared.addZone(id: id, name: newName,
+                                         latitude: record.latitude, longitude: record.longitude,
+                                         radiusMeters: newRadius)
     }
 
     // MARK: - Zone management (new ID-based API)
@@ -137,6 +154,7 @@ internal class TrackingCoordinator: NSObject {
 
     static let didEnterZoneNotification = NSNotification.Name("PlaceAlertMeDidEnterZone")
     static let didExitZoneNotification = NSNotification.Name("PlaceAlertMeDidExitZone")
+    static let didUpdateActivityNotification = NSNotification.Name("PlaceAlertMeDidUpdateActivity")
 
     static func encodeZone(_ zone: GeoZone) -> [String: Any] {
         return [
@@ -167,9 +185,16 @@ extension TrackingCoordinator: LocationManagerDelegate {
             ]
         )
 
-        // Per-zone transitions are already computed by the shared C++ engine.
+        // Per-zone transitions from the stateful C++ engine.
+        // Convert to GeoEngineZoneTransition so postTransition can look up the GeoZone.
         for transition in response.transitions {
-            postTransition(transition)
+            let geo = GeoEngineZoneTransition(
+                zoneId: transition.zoneId,
+                isInside: transition.type == .enter,
+                zoneIndex: -1,
+                distanceMeters: transition.distanceMeters
+            )
+            postTransition(geo)
         }
     }
 
@@ -196,6 +221,17 @@ extension TrackingCoordinator: LocationManagerDelegate {
 
 extension TrackingCoordinator: ActivityRecognitionDelegate {
     func activityRecognitionManager(_ manager: ActivityRecognitionManager, didDetectActivity activity: CMMotionActivity) {
+        let status = ActivityRecognitionManager.status(from: activity)
+        NotificationCenter.default.post(
+            name: Self.didUpdateActivityNotification,
+            object: nil,
+            userInfo: [
+                "activityType": status.activityType.rawValue,
+                "confidence": status.confidence.rawValue,
+                "timestamp": status.timestamp,
+            ]
+        )
+
         if activity.stationary {
             locationManager.activityScaleFactor = 3.0
         } else if activity.automotive {

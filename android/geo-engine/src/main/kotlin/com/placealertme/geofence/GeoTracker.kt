@@ -62,6 +62,45 @@ class GeoTracker(private val context: Context) {
 
     fun getZoneCount(): Int = GeoEngineJNI.getZoneCount()
 
+    suspend fun getCurrentPlaces(): List<PlaceVisitEntity> {
+        return GeofenceDatabase.getInstance(context).visitDao().getActiveVisits()
+    }
+
+    suspend fun getVisitHistory(zoneId: String, limit: Int = 50): List<PlaceVisitEntity> {
+        return GeofenceDatabase.getInstance(context).visitDao().getVisitHistory(zoneId, limit)
+    }
+
+    suspend fun getAllVisitHistory(limit: Int = 100): List<PlaceVisitEntity> {
+        return GeofenceDatabase.getInstance(context).visitDao().getAllVisitHistory(limit)
+    }
+
+    fun updateGeofenceZone(
+        id: String,
+        name: String? = null,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        radiusMeters: Double? = null
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val db = GeofenceDatabase.getInstance(context).zoneDao()
+            val existing = db.getAll().firstOrNull { it.id == id } ?: return@launch
+            val updated = existing.copy(
+                name          = name          ?: existing.name,
+                latitude      = latitude      ?: existing.latitude,
+                longitude     = longitude     ?: existing.longitude,
+                radiusMeters  = radiusMeters  ?: existing.radiusMeters
+            )
+            db.insert(updated)   // OnConflict.REPLACE re-registers it
+            // Re-add to JNI and native client
+            GeoEngineJNI.removeZoneById(id)
+            GeoEngineJNI.addZone(updated.id, updated.name, updated.latitude,
+                                 updated.longitude, updated.radiusMeters)
+            GeofenceNativeManager.removeZone(context, id)
+            GeofenceNativeManager.addZone(context, id, updated.latitude,
+                                           updated.longitude, updated.radiusMeters)
+        }
+    }
+
     fun pauseTracking() {
         val intent = Intent(context, LocationTrackingService::class.java).apply {
             action = "com.placealertme.ACTION_PAUSE"

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace geo_engine {
@@ -35,6 +36,18 @@ struct HistoryAlertEvent {
         : timestampMs(0), latitude(0.0), longitude(0.0) {}
 };
 
+struct HistoryActivityEvent {
+    int64_t timestampMs;
+    std::string activityType;
+    std::string confidence;
+
+    HistoryActivityEvent()
+        : timestampMs(0) {}
+
+    HistoryActivityEvent(int64_t timestamp, std::string type, std::string confidenceValue)
+        : timestampMs(timestamp), activityType(std::move(type)), confidence(std::move(confidenceValue)) {}
+};
+
 struct HistoryDaySummary {
     std::string dayKey;
     int64_t startTimestampMs;
@@ -52,6 +65,7 @@ struct HistoryDay {
     std::string dayKey;
     std::vector<HistoryRoutePoint> points;
     std::vector<HistoryAlertEvent> alertEvents;
+    std::vector<HistoryActivityEvent> activityEvents;
     HistoryDaySummary summary;
 };
 
@@ -66,6 +80,10 @@ public:
     bool appendAlertEvent(const std::string& directory,
                           const std::string& dayKey,
                           const HistoryAlertEvent& event) const;
+
+    bool appendActivityEvent(const std::string& directory,
+                             const std::string& dayKey,
+                             const HistoryActivityEvent& event) const;
 
     bool loadDay(const std::string& directory,
                  const std::string& dayKey,
