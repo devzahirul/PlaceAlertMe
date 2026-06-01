@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [GeofenceZoneEntity::class, PlaceVisitEntity::class], version = 2, exportSchema = false)
+@Database(entities = [GeofenceZoneEntity::class, PlaceVisitEntity::class], version = 3, exportSchema = false)
 abstract class GeofenceDatabase : RoomDatabase() {
     abstract fun zoneDao(): GeofenceZoneDao
     abstract fun visitDao(): PlaceVisitDao
@@ -32,13 +32,19 @@ abstract class GeofenceDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE place_visits ADD COLUMN `arrivalActivityType` TEXT NOT NULL DEFAULT 'unknown'")
+            }
+        }
+
         fun getInstance(context: Context): GeofenceDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     GeofenceDatabase::class.java,
                     "placealertme_zones.db"
-                ).addMigrations(MIGRATION_1_2).build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { INSTANCE = it }
             }
     }
 }

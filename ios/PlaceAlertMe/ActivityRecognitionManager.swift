@@ -82,5 +82,14 @@ internal class ActivityRecognitionManager {
             return .unknown
         }
     }
+
+    static func activityTypeString(from activity: CMMotionActivity) -> String {
+        if activity.automotive { return "auto" }
+        if activity.cycling { return "cycling" }
+        if activity.running { return "running" }
+        if activity.walking { return "walking" }
+        if activity.stationary { return "stationary" }
+        return "unknown"
+    }
 }
 #endif

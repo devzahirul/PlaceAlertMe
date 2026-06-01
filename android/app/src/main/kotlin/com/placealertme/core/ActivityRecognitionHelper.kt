@@ -58,6 +58,22 @@ class ActivityRecognitionHelper(private val context: Context) {
     companion object {
         const val ACTIVITY_RECOGNITION_REQUEST_CODE = 100
         const val ACTIVITY_UPDATE_INTERVAL_MS = 10000L
+
+        fun activityTypeString(detectedActivity: DetectedActivity?): String {
+            if (detectedActivity == null) return "unknown"
+            return when (detectedActivity.type) {
+                DetectedActivity.IN_VEHICLE -> "auto"
+                DetectedActivity.ON_BICYCLE -> "cycling"
+                DetectedActivity.ON_FOOT -> {
+                    if (detectedActivity.confidence >= 80) "walking" else "unknown"
+                }
+                DetectedActivity.RUNNING -> "running"
+                DetectedActivity.STILL -> "stationary"
+                DetectedActivity.TILTING -> "unknown"
+                DetectedActivity.WALKING -> "walking"
+                else -> "unknown"
+            }
+        }
     }
 }
 
@@ -69,6 +85,7 @@ class ActivityRecognitionReceiver : android.content.BroadcastReceiver() {
             val result = ActivityRecognitionResult.extractResult(intent)
             val mostProbableActivity = result?.getMostProbableActivity()
 
+            currentActivityType = ActivityRecognitionHelper.activityTypeString(mostProbableActivity)
             val isStill = mostProbableActivity?.type == DetectedActivity.STILL
 
             val trackingIntent = Intent(context, LocationTrackingService::class.java).apply {
@@ -82,5 +99,8 @@ class ActivityRecognitionReceiver : android.content.BroadcastReceiver() {
     companion object {
         const val ACTION_PAUSE_TRACKING = "com.placealertme.ACTION_PAUSE_TRACKING"
         const val ACTION_RESUME_TRACKING = "com.placealertme.ACTION_RESUME_TRACKING"
+
+        @Volatile
+        var currentActivityType: String = "unknown"
     }
 }

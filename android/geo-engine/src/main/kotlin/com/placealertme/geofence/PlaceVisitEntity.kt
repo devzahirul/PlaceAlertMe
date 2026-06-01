@@ -13,7 +13,8 @@ data class PlaceVisitEntity(
     val departureTimestampMs: Long = -1L,   // -1 = still inside
     val arrivalLatitude: Double,
     val arrivalLongitude: Double,
-    val arrivalSpeedMps: Double
+    val arrivalSpeedMps: Double,
+    val arrivalActivityType: String = "unknown"
 ) {
     val isActive: Boolean get() = departureTimestampMs == -1L
     val durationMs: Long get() = if (isActive) -1L else departureTimestampMs - arrivalTimestampMs
