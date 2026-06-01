@@ -17,6 +17,13 @@ internal class PlaceNotificationManager {
         ) { _, _ in }
     }
 
+    func notifyApproaching(zoneId: String, zoneName: String) {
+        guard !zoneName.isEmpty else { return }
+        send(id: "\(zoneId)-approaching",
+             title: "Approaching \(zoneName)",
+             body: "You are approaching \(zoneName)")
+    }
+
     func notifyEnter(zoneId: String, zoneName: String) {
         guard !zoneName.isEmpty else { return }
         send(id: "\(zoneId)-enter",

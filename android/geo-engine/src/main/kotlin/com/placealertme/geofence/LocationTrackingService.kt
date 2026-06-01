@@ -87,7 +87,7 @@ internal class LocationTrackingService : Service() {
             currentIntervalMs = scaledInterval
             updateLocationRequest()
 
-            // Emit per-zone ENTER/EXIT broadcasts
+            // Emit per-zone APPROACHING/ENTER/EXIT broadcasts + notifications
             for (t in response.transitions) {
                 when (t.type) {
                     "APPROACHING" -> {

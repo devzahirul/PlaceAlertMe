@@ -5,6 +5,7 @@ import CoreLocation
 import GeoEngineWrapper
 
 public enum TransitionType {
+    case approaching
     case enter
     case exit
 }
@@ -115,10 +116,19 @@ internal class GeoEngineManager {
                 let zoneName = withUnsafeBytes(of: t.zoneName) {
                     String(cString: $0.baseAddress!.assumingMemoryBound(to: CChar.self))
                 }
+                let transitionType: TransitionType
+                switch t.type {
+                case 0:
+                    transitionType = .approaching
+                case 1:
+                    transitionType = .enter
+                default:
+                    transitionType = .exit
+                }
                 transitions.append(ZoneTransition(
                     zoneId:         zoneId,
                     zoneName:       zoneName,
-                    type:           t.type == 0 ? .enter : .exit,
+                    type:           transitionType,
                     distanceMeters: t.distanceMeters,
                     latitude:       t.latitude,
                     longitude:      t.longitude,

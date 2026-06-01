@@ -138,10 +138,29 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
         }
 
         ZoneStatus& status = zoneStates[zone.id];
+        double approachingThreshold = zone.radiusMeters + ARRIVAL_BUFFER_METERS;
 
         switch (status.state) {
             case ZoneState::OUTSIDE:
-                if (distance < zone.radiusMeters) {
+                if (distance < approachingThreshold) {
+                    // Entering arrival buffer — notify "Approaching"
+                    status.state               = ZoneState::APPROACHING;
+                    status.pendingStateStartMs = location.timestampMs;
+                    response.transitions.push_back({
+                        zone.id, zone.name, TransitionType::APPROACHING,
+                        distance, location.latitude, location.longitude, location.speedMps,
+                        location.timestampMs
+                    });
+                }
+                break;
+
+            case ZoneState::APPROACHING:
+                if (distance >= approachingThreshold) {
+                    // Moved back outside arrival buffer — cancel approaching
+                    status.state               = ZoneState::OUTSIDE;
+                    status.pendingStateStartMs = 0;
+                } else if (distance < zone.radiusMeters) {
+                    // Entered core zone — start entry dwell timer
                     status.state               = ZoneState::PENDING_ENTER;
                     status.pendingStateStartMs = location.timestampMs;
                 }
@@ -149,9 +168,14 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
 
             case ZoneState::PENDING_ENTER:
                 if (distance >= zone.radiusMeters) {
-                    // Moved back out before dwell — cancel
-                    status.state               = ZoneState::OUTSIDE;
-                    status.pendingStateStartMs = 0;
+                    // Moved back out before dwell — go back to approaching or outside
+                    if (distance < approachingThreshold) {
+                        status.state               = ZoneState::APPROACHING;
+                        status.pendingStateStartMs = location.timestampMs;
+                    } else {
+                        status.state               = ZoneState::OUTSIDE;
+                        status.pendingStateStartMs = 0;
+                    }
                 } else if (location.timestampMs - status.pendingStateStartMs >= DWELL_ENTRY_MS) {
                     // Dwell satisfied — confirm ENTER
                     status.state               = ZoneState::INSIDE;
@@ -205,10 +229,26 @@ EngineResponse GeoEngine::processLocation(const UserLocation& location) {
         }
     }
 
+    // Check if any zone is in APPROACHING state — if so, poll frequently for accuracy
+    bool isApproachingAny = false;
+    for (const auto& zone : zones) {
+        auto it = zoneStates.find(zone.id);
+        if (it != zoneStates.end() && it->second.state == ZoneState::APPROACHING) {
+            isApproachingAny = true;
+            break;
+        }
+    }
+
     response.isInsideAnyZone         = insideAny;
     response.distanceToNearestMeters = nearestCenterDistance;
-    response.nextIntervalMs          = calculateAdaptiveInterval(
-        location.speedMps, minDistanceToBoundary);
+
+    if (isApproachingAny) {
+        // When approaching any zone, poll every 2s for high-accuracy location
+        response.nextIntervalMs = APPROACHING_INTERVAL_MS;
+    } else {
+        response.nextIntervalMs = calculateAdaptiveInterval(
+            location.speedMps, minDistanceToBoundary);
+    }
 
     lastLocation     = location;
     hasLastLocation  = true;

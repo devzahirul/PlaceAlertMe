@@ -27,6 +27,12 @@ object GeofenceNotificationManager {
             text  = "You have arrived at $zoneName")
     }
 
+    fun notifyApproaching(context: Context, zoneId: String, zoneName: String) {
+        send(context, zoneId.hashCode() xor 0,
+            title = "Approaching $zoneName",
+            text  = "You are approaching $zoneName")
+    }
+
     fun notifyExit(context: Context, zoneId: String, zoneName: String) {
         send(context, zoneId.hashCode() xor 2,
             title = "Left $zoneName",
