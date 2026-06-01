@@ -17,6 +17,9 @@
     <!-- Internet for Google Play Services -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Boot receiver for zone re-registration after device restart -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application>
         <!-- Location Tracking Service -->
         <service
@@ -24,6 +27,29 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!-- Native GeofencingClient background transition service (JobIntentService:
+             bound by the system JobScheduler, so it must not be exported but does
+             require the BIND_JOB_SERVICE permission). -->
+        <service
+            android:name=".GeofenceTransitionService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <!-- Receives geofence transitions (fires even in terminated state) and
+             hands them to GeofenceTransitionService via enqueueWork. -->
+        <receiver
+            android:name=".GeofenceBroadcastReceiver"
+            android:exported="false" />
+
+        <!-- Re-register zones after device boot -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

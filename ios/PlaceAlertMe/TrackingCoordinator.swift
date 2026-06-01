@@ -43,23 +43,31 @@ internal class TrackingCoordinator: NSObject {
         isTrackingActive = false
     }
 
-    // MARK: - Legacy zone API (no IDs)
-    //
-    // Kept for backward compatibility. New code should use the
-    // `GeoZone`-based API below.
-
-    func addGeofenceZone(latitude: Double, longitude: Double, radiusMeters: Double) {
-        let legacyId = "legacy:\(latitude):\(longitude):\(radiusMeters)"
-        addZone(GeoZone(
-            id: legacyId,
-            latitude: latitude,
-            longitude: longitude,
-            radiusMeters: radiusMeters
-        ))
+    func addGeofenceZone(id: String, name: String, latitude: Double, longitude: Double, radiusMeters: Double) {
+        locationManager.addGeofenceZone(id: id, name: name,
+                                         latitude: latitude, longitude: longitude,
+                                         radiusMeters: radiusMeters)
+        // Also register in zonesById so postTransition can look up the GeoZone.
+        let zone = GeoZone(id: id, latitude: latitude, longitude: longitude, radiusMeters: radiusMeters)
+        zonesById[id] = zone
     }
 
     func clearGeofenceZones() {
         clearAllZones()
+    }
+
+    func updateGeofenceZone(id: String, name: String?, radiusMeters: Double?) {
+        guard let record = PlaceStore.shared.load().first(where: { $0.id == id }) else { return }
+        let newName   = name         ?? record.name
+        let newRadius = radiusMeters ?? record.radiusMeters
+        let updated   = PlaceRecord(id: id, name: newName,
+                                    latitude: record.latitude, longitude: record.longitude,
+                                    radiusMeters: newRadius)
+        PlaceStore.shared.add(updated)
+        GeoEngineManager.shared.removeZone(id: id)
+        GeoEngineManager.shared.addZone(id: id, name: newName,
+                                         latitude: record.latitude, longitude: record.longitude,
+                                         radiusMeters: newRadius)
     }
 
     // MARK: - Zone management (new ID-based API)
@@ -169,25 +177,42 @@ extension TrackingCoordinator: LocationManagerDelegate {
             name: NSNotification.Name("GeofenceStatusChanged"),
             object: nil,
             userInfo: [
-                "isInside": response.isInsideZone,
+                "isInside": response.isInsideAnyZone,
                 "latitude": location.coordinate.latitude,
                 "longitude": location.coordinate.longitude,
-                "distance": response.distanceMeters,
-                "nextInterval": response.nextIntervalMs,
+                "distance": response.distanceToNearestMeters,
+                "nextInterval": response.nextIntervalMs
             ]
         )
 
-        // Per-zone transitions are already computed by the shared C++ engine.
+        // Per-zone transitions from the stateful C++ engine.
+        // Convert to GeoEngineZoneTransition so postTransition can look up the GeoZone.
         for transition in response.transitions {
-            postTransition(transition)
+            let geo = GeoEngineZoneTransition(
+                zoneId: transition.zoneId,
+                isInside: transition.type == .enter,
+                zoneIndex: -1,
+                distanceMeters: transition.distanceMeters
+            )
+            postTransition(geo)
         }
     }
 
-    func locationManager(_ manager: LocationManager, didChangeZoneStatus isInside: Bool) {
+    func locationManager(_ manager: LocationManager, didTransition transition: ZoneTransition) {
+        let notificationName: NSNotification.Name
+        switch transition.type {
+        case .enter: notificationName = NSNotification.Name("ZoneEnter")
+        case .exit:  notificationName = NSNotification.Name("ZoneExit")
+        }
         NotificationCenter.default.post(
-            name: NSNotification.Name("GeofenceZoneStatusChanged"),
+            name: notificationName,
             object: nil,
-            userInfo: ["isInside": isInside]
+            userInfo: [
+                "zoneId": transition.zoneId,
+                "zoneName": transition.zoneName,
+                "distanceMeters": transition.distanceMeters,
+                "timestampMs": transition.timestampMs
+            ]
         )
     }
 }
@@ -207,10 +232,12 @@ extension TrackingCoordinator: ActivityRecognitionDelegate {
             ]
         )
 
-        if ActivityRecognitionManager.isActivityStill(activity) {
-            locationManager.pauseTracking()
-        } else if ActivityRecognitionManager.isActivityMoving(activity) {
-            locationManager.resumeTracking()
+        if activity.stationary {
+            locationManager.activityScaleFactor = 3.0
+        } else if activity.automotive {
+            locationManager.activityScaleFactor = 0.5
+        } else {
+            locationManager.activityScaleFactor = 1.0
         }
     }
 }

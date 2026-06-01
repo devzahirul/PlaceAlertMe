@@ -162,7 +162,7 @@ jobs:
         run: |
           xcodebuild test \
             -scheme PlaceAlertMe \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
             -enableCodeCoverage YES \
             -resultBundlePath test-results.xcresult \
             -derivedDataPath DerivedData
