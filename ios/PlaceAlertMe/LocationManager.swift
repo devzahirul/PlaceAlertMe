@@ -2,26 +2,28 @@ import Foundation
 
 #if os(iOS)
 import CoreLocation
+import CoreMotion
 
 internal protocol LocationManagerDelegate: AnyObject {
     func locationManager(_ manager: LocationManager, didUpdate location: CLLocation, response: GeoEngineResponse)
     func locationManager(_ manager: LocationManager, didTransition transition: ZoneTransition)
 }
-#endif
 
-#if os(iOS)
-internal class LocationManager: NSObject, CLLocationManagerDelegate {
+internal class LocationManager: NSObject, CLLocationManagerDelegate, ActivityRecognitionDelegate {
     weak var delegate: LocationManagerDelegate?
 
     private let clLocationManager = CLLocationManager()
     private let geoEngineManager = GeoEngineManager.shared
+    private let activityRecognitionManager = ActivityRecognitionManager()
     private var currentIntervalMs: Int64 = 10000
     private var updateTimer: Timer?
+    private var currentActivityTypeString: String = "unknown"
     var activityScaleFactor: Double = 1.0
 
     override init() {
         super.init()
         setupLocationManager()
+        activityRecognitionManager.delegate = self
     }
 
     private func setupLocationManager() {
@@ -54,6 +56,7 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
                              longitude: record.longitude, radiusMeters: record.radiusMeters)
         }
         PlaceNotificationManager.shared.requestAuthorization()
+        activityRecognitionManager.startActivityRecognition()
         clLocationManager.startUpdatingLocation()
     }
 
@@ -61,6 +64,7 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
         clLocationManager.stopUpdatingLocation()
         updateTimer?.invalidate()
         updateTimer = nil
+        activityRecognitionManager.stopActivityRecognition()
     }
 
     func pauseTracking() {
@@ -124,7 +128,7 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
         for transition in response.transitions {
             switch transition.type {
             case .enter:
-                PlaceVisitStore.shared.recordEntry(transition: transition)
+                PlaceVisitStore.shared.recordEntry(transition: transition, activityType: currentActivityTypeString)
                 PlaceNotificationManager.shared.notifyEnter(zoneId: transition.zoneId, zoneName: transition.zoneName)
             case .exit:
                 PlaceVisitStore.shared.recordExit(zoneId: transition.zoneId, timestampMs: transition.timestampMs)
@@ -188,6 +192,12 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
         updateTimer = Timer.scheduledTimer(withTimeInterval: intervalSeconds, repeats: true) { [weak self] _ in
             self?.clLocationManager.requestLocation()
         }
+    }
+
+    // MARK: - ActivityRecognitionDelegate
+
+    func activityRecognitionManager(_ manager: ActivityRecognitionManager, didDetectActivity activity: CMMotionActivity) {
+        currentActivityTypeString = ActivityRecognitionManager.activityTypeString(from: activity)
     }
 }
 #endif

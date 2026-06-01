@@ -9,6 +9,7 @@ public struct PlaceVisit: Codable, Identifiable {
     public let arrivalLatitude: Double
     public let arrivalLongitude: Double
     public let arrivalSpeedMps: Double
+    public let arrivalActivityType: String   // "walking", "auto", "bus", "stationary", etc.
 
     public var isActive: Bool { departureTimestampMs == nil }
 
@@ -20,7 +21,8 @@ public struct PlaceVisit: Codable, Identifiable {
     public init(zoneId: String, zoneName: String,
                 arrivalTimestampMs: Int64,
                 arrivalLatitude: Double, arrivalLongitude: Double,
-                arrivalSpeedMps: Double) {
+                arrivalSpeedMps: Double,
+                arrivalActivityType: String = "unknown") {
         self.id = UUID().uuidString
         self.zoneId = zoneId
         self.zoneName = zoneName
@@ -29,6 +31,7 @@ public struct PlaceVisit: Codable, Identifiable {
         self.arrivalLatitude = arrivalLatitude
         self.arrivalLongitude = arrivalLongitude
         self.arrivalSpeedMps = arrivalSpeedMps
+        self.arrivalActivityType = arrivalActivityType
     }
 }
 
@@ -39,7 +42,7 @@ internal class PlaceVisitStore {
 
     private init() {}
 
-    func recordEntry(transition: ZoneTransition) {
+    func recordEntry(transition: ZoneTransition, activityType: String = "unknown") {
         var visits = loadAll()
         let visit = PlaceVisit(
             zoneId: transition.zoneId,
@@ -47,7 +50,8 @@ internal class PlaceVisitStore {
             arrivalTimestampMs: transition.timestampMs,
             arrivalLatitude: transition.latitude,
             arrivalLongitude: transition.longitude,
-            arrivalSpeedMps: transition.speedMps
+            arrivalSpeedMps: transition.speedMps,
+            arrivalActivityType: activityType
         )
         visits.append(visit)
         save(visits)
