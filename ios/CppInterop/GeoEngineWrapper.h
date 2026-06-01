@@ -13,7 +13,7 @@ extern "C" {
 struct GeoEngineTransition {
     char      zoneId[64];
     char      zoneName[128];
-    int       type;           // 0 = ENTER, 1 = EXIT
+    int       type;           // 0 = APPROACHING, 1 = ENTER, 2 = EXIT
     double    distanceMeters;
     double    latitude;
     double    longitude;

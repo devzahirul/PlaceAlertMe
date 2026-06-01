@@ -123,6 +123,8 @@ internal class LocationManager: NSObject, CLLocationManagerDelegate {
 
         for transition in response.transitions {
             switch transition.type {
+            case .approaching:
+                PlaceNotificationManager.shared.notifyApproaching(zoneId: transition.zoneId, zoneName: transition.zoneName)
             case .enter:
                 PlaceVisitStore.shared.recordEntry(transition: transition)
                 PlaceNotificationManager.shared.notifyEnter(zoneId: transition.zoneId, zoneName: transition.zoneName)

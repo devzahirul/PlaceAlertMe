@@ -87,35 +87,47 @@ internal class LocationTrackingService : Service() {
             currentIntervalMs = scaledInterval
             updateLocationRequest()
 
-            // Emit per-zone ENTER/EXIT broadcasts
+            // Emit per-zone APPROACHING/ENTER/EXIT broadcasts + notifications
             for (t in response.transitions) {
-                val action = if (t.type == "ENTER") GeoTracker.ACTION_ZONE_ENTER
-                             else                    GeoTracker.ACTION_ZONE_EXIT
-                sendBroadcast(Intent(action).apply {
-                    putExtra(GeoTracker.EXTRA_ZONE_ID,   t.zoneId)
-                    putExtra(GeoTracker.EXTRA_ZONE_NAME, t.zoneName)
-                    putExtra(GeoTracker.EXTRA_DISTANCE,  t.distanceMeters)
-                    putExtra(GeoTracker.EXTRA_TIMESTAMP, t.timestampMs)
-                })
-                if (t.type == "ENTER") {
-                    GeofenceNotificationManager.notifyEnter(this@LocationTrackingService, t.zoneId, t.zoneName)
-                    CoroutineScope(Dispatchers.IO).launch {
-                        GeofenceDatabase.getInstance(this@LocationTrackingService).visitDao().insert(
-                            PlaceVisitEntity(
-                                zoneId             = t.zoneId,
-                                zoneName           = t.zoneName,
-                                arrivalTimestampMs = t.timestampMs,
-                                arrivalLatitude    = t.latitude,
-                                arrivalLongitude   = t.longitude,
-                                arrivalSpeedMps    = t.speedMps
-                            )
-                        )
+                when (t.type) {
+                    "APPROACHING" -> {
+                        GeofenceNotificationManager.notifyApproaching(this@LocationTrackingService, t.zoneId, t.zoneName)
                     }
-                } else {
-                    GeofenceNotificationManager.notifyExit(this@LocationTrackingService, t.zoneId, t.zoneName)
-                    CoroutineScope(Dispatchers.IO).launch {
-                        GeofenceDatabase.getInstance(this@LocationTrackingService).visitDao()
-                            .closeVisit(t.zoneId, t.timestampMs)
+                    "ENTER" -> {
+                        val action = GeoTracker.ACTION_ZONE_ENTER
+                        sendBroadcast(Intent(action).apply {
+                            putExtra(GeoTracker.EXTRA_ZONE_ID,   t.zoneId)
+                            putExtra(GeoTracker.EXTRA_ZONE_NAME, t.zoneName)
+                            putExtra(GeoTracker.EXTRA_DISTANCE,  t.distanceMeters)
+                            putExtra(GeoTracker.EXTRA_TIMESTAMP, t.timestampMs)
+                        })
+                        GeofenceNotificationManager.notifyEnter(this@LocationTrackingService, t.zoneId, t.zoneName)
+                        CoroutineScope(Dispatchers.IO).launch {
+                            GeofenceDatabase.getInstance(this@LocationTrackingService).visitDao().insert(
+                                PlaceVisitEntity(
+                                    zoneId             = t.zoneId,
+                                    zoneName           = t.zoneName,
+                                    arrivalTimestampMs = t.timestampMs,
+                                    arrivalLatitude    = t.latitude,
+                                    arrivalLongitude   = t.longitude,
+                                    arrivalSpeedMps    = t.speedMps
+                                )
+                            )
+                        }
+                    }
+                    "EXIT" -> {
+                        val action = GeoTracker.ACTION_ZONE_EXIT
+                        sendBroadcast(Intent(action).apply {
+                            putExtra(GeoTracker.EXTRA_ZONE_ID,   t.zoneId)
+                            putExtra(GeoTracker.EXTRA_ZONE_NAME, t.zoneName)
+                            putExtra(GeoTracker.EXTRA_DISTANCE,  t.distanceMeters)
+                            putExtra(GeoTracker.EXTRA_TIMESTAMP, t.timestampMs)
+                        })
+                        GeofenceNotificationManager.notifyExit(this@LocationTrackingService, t.zoneId, t.zoneName)
+                        CoroutineScope(Dispatchers.IO).launch {
+                            GeofenceDatabase.getInstance(this@LocationTrackingService).visitDao()
+                                .closeVisit(t.zoneId, t.timestampMs)
+                        }
                     }
                 }
             }

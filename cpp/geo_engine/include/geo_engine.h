@@ -12,10 +12,12 @@ namespace geo_engine {
 // Life360-parity constants
 static constexpr double  MIN_RADIUS_METERS        = 150.0;
 static constexpr double  MAX_ACCURACY_METERS       = 65.0;
-static constexpr double  EXIT_BUFFER_METERS        = 50.0;
+static constexpr double  ARRIVAL_BUFFER_METERS     = 500.0;  // Outer detection zone
+static constexpr double  EXIT_BUFFER_METERS        = 50.0;   // Exit hysteresis
 static constexpr int64_t DWELL_ENTRY_MS            = 10000;
 static constexpr int64_t DWELL_EXIT_MS             = 10000;
 static constexpr int64_t ACCURACY_WAIT_INTERVAL_MS = 5000;
+static constexpr int64_t APPROACHING_INTERVAL_MS   = 2000;   // Fast polling when approaching
 
 struct UserLocation {
     double  latitude;
@@ -53,7 +55,7 @@ struct GeofenceZone {
           exitBufferMeters(EXIT_BUFFER_METERS) {}
 };
 
-enum class TransitionType { ENTER, EXIT };
+enum class TransitionType { APPROACHING, ENTER, EXIT };
 
 struct ZoneTransition {
     std::string    zoneId;
@@ -74,7 +76,15 @@ struct EngineResponse {
 };
 
 // Per-zone state machine state (private to engine, exposed in header for tests)
-enum class ZoneState { OUTSIDE, PENDING_ENTER, INSIDE, PENDING_EXIT };
+// OUTSIDE → APPROACHING (entering buffer) → PENDING_ENTER (10s dwell in zone)
+//   → INSIDE → PENDING_EXIT (outside + hysteresis) → OUTSIDE
+enum class ZoneState {
+    OUTSIDE,
+    APPROACHING,        // Inside arrival buffer (~500m), approaching the zone
+    PENDING_ENTER,      // Inside zone boundary, awaiting 10s dwell
+    INSIDE,             // Confirmed inside zone (dwell satisfied)
+    PENDING_EXIT        // Outside zone + buffer, awaiting 10s dwell
+};
 
 struct ZoneStatus {
     ZoneState state              = ZoneState::OUTSIDE;

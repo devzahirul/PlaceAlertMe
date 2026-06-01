@@ -63,7 +63,14 @@ struct GeoEngineResult ios_geo_engine_process_location(double latitude, double l
         strncpy(result.transitions[i].zoneName, t.zoneName.c_str(), 127);
         result.transitions[i].zoneId[63]    = '\0';
         result.transitions[i].zoneName[127] = '\0';
-        result.transitions[i].type          = (t.type == TransitionType::ENTER) ? 0 : 1;
+        // Map C++ TransitionType to integer: APPROACHING=0, ENTER=1, EXIT=2
+        if (t.type == TransitionType::APPROACHING) {
+            result.transitions[i].type = 0;
+        } else if (t.type == TransitionType::ENTER) {
+            result.transitions[i].type = 1;
+        } else {
+            result.transitions[i].type = 2;  // EXIT
+        }
         result.transitions[i].distanceMeters = t.distanceMeters;
         result.transitions[i].latitude      = t.latitude;
         result.transitions[i].longitude     = t.longitude;
